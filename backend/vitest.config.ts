@@ -5,5 +5,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    reporters: process.env.CI ? ['verbose', 'junit'] : ['verbose'],
+    outputFile: {
+      junit: './test-results/junit.xml',
+    },
   },
 })
