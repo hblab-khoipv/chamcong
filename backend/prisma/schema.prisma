@@ -1,0 +1,11 @@
+// T1 will populate this file with the full data model.
+// See PRD section 2 for the complete entity definitions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

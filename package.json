@@ -1,0 +1,16 @@
+{
+  "name": "chamcong",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
