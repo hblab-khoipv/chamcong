@@ -39,6 +39,32 @@ next calendar day (e.g. `17:00–00:00` means 17:00 today through 24:00 today).
 This exists because `TIME` can't represent a literal `24:00`. Full detail and
 the seeded default 3-band layout: `docs/ERD.md`.
 
+## Rate band overlap/gap math
+
+Overlap validation and the `GET /rate-bands/coverage` gap check both go
+through `backend/src/lib/timeOfDay.ts`: each band is converted to minutes-
+since-midnight and split into 1-2 half-open intervals on a fixed 0-1440
+line (`bandIntervals`, applying the midnight-wrap convention above), then
+compared/merged. Add new band-schedule logic there rather than
+re-deriving interval math in a route handler.
+
+## Soft-delete semantics differ between rate_bands and holidays
+
+`DELETE /rate-bands/:id` hard-deletes unless a segment references it (then
+soft-deletes). `DELETE /holidays/:id` always soft-deletes (deactivates) —
+the PRD treats holiday delete/deactivate as the same operation, so there is
+no hard-delete path for holidays. Don't assume the two DELETE endpoints
+behave the same way.
+
+## Holiday rate calc is a standalone stub until T9
+
+`backend/src/lib/holidayRate.ts` has `getActiveHolidayForDate` (the
+internal "check if a date is a holiday" lookup the PRD describes for T5
+item 6) and `applyHolidayRate` (pure PERCENT/FIXED arithmetic). Neither is
+wired into `attendance_sessions`/`attendance_session_segments` yet — that
+integration is T9's rate splitting engine. T9 should call these rather than
+reimplementing the PERCENT/FIXED math.
+
 ## Auth model
 
 JWT is stateless (no server-side session/blacklist) — `POST /auth/logout` is

@@ -123,6 +123,15 @@ chamcong/
 | PATCH | /employees/:id | Có | Sửa nhân viên |
 | DELETE | /employees/:id | Có | Vô hiệu hoá nhân viên (soft-delete) |
 | PATCH | /employees/:id/link-external | Có | Gán `external_id` cho nhân viên thủ công |
+| GET | /rate-bands | Có | Danh sách khung giờ tính giá (filter `active`) |
+| GET | /rate-bands/coverage | Có | Bản đồ phủ 24h + danh sách gap chưa phủ |
+| POST | /rate-bands | Có | Tạo khung giờ mới (chặn nếu chồng lấn với band active khác) |
+| PATCH | /rate-bands/:id | Có | Sửa khung giờ |
+| DELETE | /rate-bands/:id | Có | Xoá khung giờ (hard-delete nếu chưa dùng, soft-delete nếu đã có segment tham chiếu) |
+| GET | /holidays | Có | Danh sách ngày lễ (filter `year`) |
+| POST | /holidays | Có | Tạo ngày lễ (chặn trùng `holiday_date`) |
+| PATCH | /holidays/:id | Có | Sửa ngày lễ |
+| DELETE | /holidays/:id | Có | Vô hiệu hoá ngày lễ (soft-delete/deactivate) |
 
 Auth: gửi header `Authorization: Bearer <token>` (token nhận từ `POST /auth/login`).
 
@@ -136,8 +145,8 @@ Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và 
 - [x] T1 — Thiết kế & migration schema dữ liệu
 - [x] T2 — Xác thực Admin
 - [x] T3 — Quản lý Nhân viên
-- [ ] T4 — Quản lý Khung giờ tính giá
-- [ ] T5 — Quản lý Ngày lễ
+- [x] T4 — Quản lý Khung giờ tính giá
+- [x] T5 — Quản lý Ngày lễ
 - [ ] T6 — Webhook nhận sự kiện chấm công
 - [ ] T7 — Khớp nhân viên
 - [ ] T8 — Vòng đời phiên chấm công
