@@ -1,0 +1,133 @@
+# Chấm Công — Hệ thống chấm công & tính lương partime
+
+Hệ thống tự động nhận sự kiện login/logout từ app quản lý bán hàng qua webhook, tính giờ làm và tiền lương theo khung giờ và ngày lễ cho nhân viên partime.
+
+## Tech stack
+
+| Thành phần | Công nghệ | Phiên bản |
+|---|---|---|
+| Backend runtime | Node.js | 20 LTS |
+| Backend framework | Express | 4.18 |
+| ORM / Migration | Prisma | 5.7 |
+| Database | PostgreSQL | 15 |
+| Frontend framework | React | 18.2 |
+| Frontend bundler | Vite | 5.0 |
+| Ngôn ngữ | TypeScript | 5.3 |
+| Test runner | Vitest | 1.1 |
+
+> **Tại sao TypeScript?** Dự án có data model phức tạp (8 entity, nhiều quan hệ), thuật toán tính lương nhiều bước, và Prisma tích hợp rất tốt với TypeScript. TypeScript giúp bắt lỗi type ngay lúc phát triển thay vì khi chạy.
+
+## Prerequisites
+
+- Node.js 20+
+- Docker & Docker Compose
+- npm 10+
+
+## Chạy local với Docker (khuyến nghị)
+
+```bash
+# 1. Clone hoặc mở thư mục project
+cd chamcong
+
+# 2. Copy file biến môi trường
+cp .env.example .env
+
+# 3. Khởi động DB + backend
+docker compose up
+
+# 4. Kiểm tra health endpoint
+curl http://localhost:3000/health
+```
+
+## Chạy local không có Docker
+
+```bash
+# Cần PostgreSQL chạy sẵn trên máy (port 5432)
+
+# 1. Cài dependencies
+npm install
+
+# 2. Copy và điền biến môi trường
+cp backend/.env.example backend/.env
+# Sửa DATABASE_URL trong backend/.env trỏ tới PostgreSQL của bạn
+
+# 3. Chạy migrations
+npm run db:migrate --workspace=backend
+
+# 4. Chạy backend
+npm run dev:backend
+
+# 5. Chạy frontend (terminal khác)
+npm run dev:frontend
+```
+
+## Chạy migrations
+
+```bash
+# Chạy migration trên DB (cần DATABASE_URL được set)
+npm run db:migrate --workspace=backend
+
+# Seed dữ liệu mẫu (tạo admin mặc định, 3 ca, ngày lễ mẫu)
+npm run db:seed --workspace=backend
+
+# Xem schema DB qua UI
+npm run db:studio --workspace=backend
+```
+
+## Chạy tests
+
+```bash
+# Chạy tất cả tests (backend + frontend)
+npm test
+
+# Chỉ backend
+npm test --workspace=backend
+
+# Chỉ frontend
+npm test --workspace=frontend
+
+# Watch mode
+npm run test:watch --workspace=backend
+```
+
+## Cấu trúc project
+
+```
+chamcong/
+├── backend/          # Node.js + Express + Prisma API server
+│   ├── prisma/       # Schema và migrations
+│   └── src/
+│       ├── lib/      # Prisma client, utilities
+│       ├── routes/   # Express route handlers
+│       ├── services/ # Business logic (T7 onwards)
+│       └── tests/    # Vitest tests
+├── frontend/         # React + Vite admin UI
+│   └── src/
+├── docker-compose.yml
+└── .env.example
+```
+
+## Endpoints hiện có
+
+| Method | Path | Mô tả |
+|---|---|---|
+| GET | /health | Kiểm tra trạng thái server và DB |
+
+## Development roadmap
+
+Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và thứ tự thực hiện.
+
+- [x] T0 — Khởi tạo project & môi trường
+- [ ] T1 — Thiết kế & migration schema dữ liệu
+- [ ] T2 — Xác thực Admin
+- [ ] T3 — Quản lý Nhân viên
+- [ ] T4 — Quản lý Khung giờ tính giá
+- [ ] T5 — Quản lý Ngày lễ
+- [ ] T6 — Webhook nhận sự kiện chấm công
+- [ ] T7 — Khớp nhân viên
+- [ ] T8 — Vòng đời phiên chấm công
+- [ ] T9 — Rate Splitting Engine
+- [ ] T10 — Trigger tính toán
+- [ ] T11 — Sửa tay & tính lại
+- [ ] T12–T16 — Giao diện Admin
+- [ ] T17–T19 — Vận hành & triển khai
