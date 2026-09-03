@@ -65,6 +65,42 @@ wired into `attendance_sessions`/`attendance_session_segments` yet — that
 integration is T9's rate splitting engine. T9 should call these rather than
 reimplementing the PERCENT/FIXED math.
 
+## Router mount order in app.ts matters
+
+Every router in `backend/src/app.ts` is mounted with `app.use(router)` (no
+path prefix) and each protected router calls `router.use(authenticate)`
+unconditionally — so a router mounted earlier intercepts *every* request
+path, not just its own, and 401s before Express ever reaches a later
+router. Any new unauthenticated route (like `POST /webhooks/attendance`,
+T6) must be mounted before all `authenticate`-guarded routers, not just in
+whatever position feels natural.
+
+## Attendance webhook → session pipeline (T6-T8)
+
+`POST /webhooks/attendance` (`backend/src/routes/webhooks.ts`, no auth —
+`verifyWebhookAuth()` in `lib/webhookAuth.ts` is a T17 placeholder) does
+idempotent intake (`dedupe_key`) into `attendance_events`, then calls
+`lib/attendanceProcessing.ts#processAttendanceEvent` synchronously before
+responding — no queue. That function chains `lib/employeeMatching.ts`
+(T7: match/auto-create by `external_id`, else `UNMATCHED`) and
+`lib/attendanceSession.ts` (T8: LOGIN/LOGOUT pairing, orphan/missing-logout
+FLAGGED sessions, hourly stale-session sweep). The same
+`processAttendanceEvent` path is reused by `POST
+/attendance-events/:id/reprocess`, so a manually-linked employee replays
+through identical logic. `AUTO_CREATE_EMPLOYEE_ON_WEBHOOK` and
+`ATTENDANCE_SESSION_STALE_HOURS` (`lib/config.ts`) are plain env vars, not
+a Settings entity/UI — that doesn't exist until T14 (Phase 5).
+
+## Session state transitions use guarded updateMany, not read-then-write
+
+`lib/attendanceSession.ts`'s close/flag transitions go through
+`updateMany({ where: { id, status: 'OPEN' }, ... })` and check
+`result.count > 0` to know if they won, instead of reading the session
+then writing it. This is what makes the LOGOUT-vs-stale-sweep race (T8)
+safe without an explicit transaction/lock: two concurrent callers can't
+both flip the same OPEN session, since only one UPDATE's WHERE clause
+still matches by the time it executes.
+
 ## Auth model
 
 JWT is stateless (no server-side session/blacklist) — `POST /auth/logout` is
