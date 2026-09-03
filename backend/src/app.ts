@@ -1,5 +1,8 @@
 import express, { Application, Request, Response, NextFunction } from 'express'
 import healthRouter from './routes/health'
+import authRouter from './routes/auth'
+import adminsRouter from './routes/admins'
+import employeesRouter from './routes/employees'
 
 export function createApp(): Application {
   const app = express()
@@ -8,6 +11,9 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true }))
 
   app.use(healthRouter)
+  app.use(authRouter)
+  app.use(adminsRouter)
+  app.use(employeesRouter)
 
   // 404 handler
   app.use((_req: Request, res: Response) => {
