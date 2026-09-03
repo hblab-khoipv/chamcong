@@ -3,6 +3,8 @@ import healthRouter from './routes/health'
 import authRouter from './routes/auth'
 import adminsRouter from './routes/admins'
 import employeesRouter from './routes/employees'
+import rateBandsRouter from './routes/rateBands'
+import holidaysRouter from './routes/holidays'
 
 export function createApp(): Application {
   const app = express()
@@ -14,6 +16,8 @@ export function createApp(): Application {
   app.use(authRouter)
   app.use(adminsRouter)
   app.use(employeesRouter)
+  app.use(rateBandsRouter)
+  app.use(holidaysRouter)
 
   // 404 handler
   app.use((_req: Request, res: Response) => {
