@@ -1,5 +1,4 @@
-// T1 will populate this file with the full data model.
-// See PRD section 2 for the complete entity definitions.
+// Full data model per PRD section 2 (T1).
 
 generator client {
   provider = "prisma-client-js"
@@ -10,9 +9,186 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder so `prisma generate` has at least one model to emit a client
-// from; Prisma refuses to generate anything for a schema with zero models.
-// T1 replaces this with the real data model and removes it.
-model Placeholder {
-  id Int @id @default(autoincrement())
+enum EmployeeSource {
+  synced
+  manual
+}
+
+enum AttendanceEventType {
+  LOGIN
+  LOGOUT
+}
+
+// PENDING: just received, not processed yet.
+// PROCESSED: matched to an employee and a session was created/updated (T7/T8).
+// UNMATCHED: no employee could be matched and auto-create is disabled (T7).
+// ERROR: processing raised an unexpected error.
+enum AttendanceEventProcessStatus {
+  PENDING
+  PROCESSED
+  UNMATCHED
+  ERROR
+}
+
+enum AttendanceSessionStatus {
+  OPEN
+  CLOSED
+  FLAGGED
+  MANUAL
+}
+
+enum HolidayRateType {
+  PERCENT
+  FIXED
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  auditLogs AuditLog[]
+
+  @@map("admins")
+}
+
+model Employee {
+  id         String         @id @default(uuid())
+  // external_id: id từ app bán hàng, null nếu tạo tay (source = manual).
+  externalId String?        @unique @map("external_id")
+  name       String
+  phone      String?
+  source     EmployeeSource @default(manual)
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  attendanceEvents   AttendanceEvent[]
+  attendanceSessions AttendanceSession[]
+
+  @@map("employees")
+}
+
+model RateBand {
+  id             String   @id @default(uuid())
+  name           String
+  // Time-of-day only (date component ignored). May cross midnight, e.g.
+  // start=22:00, end=06:00 — business logic for that lives in T4/T9.
+  startTime      DateTime @map("start_time") @db.Time()
+  endTime        DateTime @map("end_time") @db.Time()
+  ratePerHourVnd Int      @map("rate_per_hour_vnd")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  segments AttendanceSessionSegment[]
+
+  @@map("rate_bands")
+}
+
+model Holiday {
+  id          String          @id @default(uuid())
+  holidayDate DateTime        @unique @map("holiday_date") @db.Date
+  name        String
+  rateType    HolidayRateType @map("rate_type")
+  // PERCENT: % áp lên đơn giá band (vd 200 = gấp đôi). FIXED: đơn giá/giờ cố định (VND).
+  rateValue   Decimal         @map("rate_value") @db.Decimal(12, 2)
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  segments AttendanceSessionSegment[]
+
+  @@map("holidays")
+}
+
+model AttendanceEvent {
+  id                 String                        @id @default(uuid())
+  employeeExternalId String                        @map("employee_external_id")
+  // employee_id: null nếu chưa match được (T7).
+  employeeId         String?                       @map("employee_id")
+  eventType          AttendanceEventType           @map("event_type")
+  eventTime          DateTime                      @map("event_time")
+  rawPayload         Json                          @map("raw_payload")
+  dedupeKey          String                        @unique @map("dedupe_key")
+  processStatus      AttendanceEventProcessStatus  @default(PENDING) @map("process_status")
+  receivedAt         DateTime                      @default(now()) @map("received_at")
+
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([eventTime])
+  @@map("attendance_events")
+}
+
+model AttendanceSession {
+  id             String                  @id @default(uuid())
+  employeeId     String                  @map("employee_id")
+  // login_time/logout_time: null cho phép để biểu diễn phiên FLAGGED thiếu 1 đầu (T8).
+  loginTime      DateTime?               @map("login_time")
+  logoutTime     DateTime?               @map("logout_time")
+  status         AttendanceSessionStatus @default(OPEN)
+  totalHours     Decimal                 @default(0) @map("total_hours") @db.Decimal(10, 2)
+  totalAmountVnd Int                     @default(0) @map("total_amount_vnd")
+  computedAt     DateTime?               @map("computed_at")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+
+  employee Employee                    @relation(fields: [employeeId], references: [id])
+  segments AttendanceSessionSegment[]
+
+  @@index([employeeId])
+  @@index([employeeId, status])
+  @@map("attendance_sessions")
+}
+
+model AttendanceSessionSegment {
+  id             String   @id @default(uuid())
+  sessionId      String   @map("session_id")
+  // rate_band_id/holiday_id: null nếu đoạn rơi vào gap / không phải ngày lễ (T9).
+  rateBandId     String?  @map("rate_band_id")
+  holidayId      String?  @map("holiday_id")
+  segmentStart   DateTime @map("segment_start")
+  segmentEnd     DateTime @map("segment_end")
+  hours          Decimal  @db.Decimal(10, 2)
+  rateAppliedVnd Int      @map("rate_applied_vnd")
+  amountVnd      Int      @map("amount_vnd")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session  AttendanceSession @relation(fields: [sessionId], references: [id])
+  rateBand RateBand?         @relation(fields: [rateBandId], references: [id])
+  holiday  Holiday?          @relation(fields: [holidayId], references: [id])
+
+  @@index([sessionId])
+  @@map("attendance_session_segments")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String?  @map("admin_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin Admin? @relation(fields: [adminId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model WebhookLog {
+  id           String   @id @default(uuid())
+  rawBody      Json?    @map("raw_body")
+  headers      Json?
+  resultStatus String   @map("result_status")
+  reason       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("webhook_logs")
 }

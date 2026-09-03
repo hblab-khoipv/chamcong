@@ -109,18 +109,33 @@ chamcong/
 
 ## Endpoints hiện có
 
-| Method | Path | Mô tả |
-|---|---|---|
-| GET | /health | Kiểm tra trạng thái server và DB |
+| Method | Path | Auth | Mô tả |
+|---|---|---|---|
+| GET | /health | Không | Kiểm tra trạng thái server và DB |
+| POST | /auth/login | Không | Đăng nhập, trả JWT |
+| POST | /auth/logout | Có | Đăng xuất (JWT stateless, chỉ là formality) |
+| GET | /admins | Có | Danh sách Admin |
+| POST | /admins | Có | Tạo Admin mới |
+| DELETE | /admins/:id | Có | Xoá Admin (chặn nếu là Admin cuối cùng) |
+| PATCH | /admins/:id/password | Có | Đổi mật khẩu Admin |
+| GET | /employees | Có | Danh sách nhân viên (filter `source`, `active`, `name`) |
+| POST | /employees | Có | Tạo nhân viên thủ công |
+| PATCH | /employees/:id | Có | Sửa nhân viên |
+| DELETE | /employees/:id | Có | Vô hiệu hoá nhân viên (soft-delete) |
+| PATCH | /employees/:id/link-external | Có | Gán `external_id` cho nhân viên thủ công |
+
+Auth: gửi header `Authorization: Bearer <token>` (token nhận từ `POST /auth/login`).
+
+Xem thêm data model tại [`docs/ERD.md`](docs/ERD.md).
 
 ## Development roadmap
 
 Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và thứ tự thực hiện.
 
 - [x] T0 — Khởi tạo project & môi trường
-- [ ] T1 — Thiết kế & migration schema dữ liệu
-- [ ] T2 — Xác thực Admin
-- [ ] T3 — Quản lý Nhân viên
+- [x] T1 — Thiết kế & migration schema dữ liệu
+- [x] T2 — Xác thực Admin
+- [x] T3 — Quản lý Nhân viên
 - [ ] T4 — Quản lý Khung giờ tính giá
 - [ ] T5 — Quản lý Ngày lễ
 - [ ] T6 — Webhook nhận sự kiện chấm công
