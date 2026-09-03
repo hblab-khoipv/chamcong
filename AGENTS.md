@@ -91,15 +91,19 @@ through identical logic. `AUTO_CREATE_EMPLOYEE_ON_WEBHOOK` and
 `ATTENDANCE_SESSION_STALE_HOURS` (`lib/config.ts`) are plain env vars, not
 a Settings entity/UI — that doesn't exist until T14 (Phase 5).
 
-## Session state transitions use guarded updateMany, not read-then-write
+## Session state transitions use SELECT ... FOR UPDATE, not read-then-write
 
-`lib/attendanceSession.ts`'s close/flag transitions go through
-`updateMany({ where: { id, status: 'OPEN' }, ... })` and check
-`result.count > 0` to know if they won, instead of reading the session
-then writing it. This is what makes the LOGOUT-vs-stale-sweep race (T8)
-safe without an explicit transaction/lock: two concurrent callers can't
-both flip the same OPEN session, since only one UPDATE's WHERE clause
-still matches by the time it executes.
+`lib/attendanceSession.ts`'s LOGIN/LOGOUT handlers and the stale-flag sweep
+each wrap their session read+write in `prisma.$transaction`, locking the
+target row with a raw `SELECT ... FOR UPDATE` before deciding what to do,
+then writing through `tx.attendanceSession.update(...)`. This is what makes
+the LOGOUT-vs-stale-sweep race (T8) safe: two concurrent transactions
+touching the same row serialize on the row lock, so whichever commits
+first is what the other sees when it re-reads the row after acquiring the
+lock — the loser reacts to the winner's outcome instead of overwriting it.
+LOGIN/LOGOUT additionally take a per-employee `pg_advisory_xact_lock`
+before the row lock, since a brand-new employee has no existing row to
+lock two concurrent first-ever LOGINs against.
 
 ## Auth model
 
