@@ -116,6 +116,90 @@ describe('T8 attendance session lifecycle', () => {
     expect(session.logoutTime?.toISOString()).toBe(new Date('2026-08-30T17:00:00+07:00').toISOString())
   })
 
+  // Regression test: a LOGOUT for a session that was auto-flagged long ago
+  // (not a live race with the sweep) must still create a fresh orphan
+  // FLAGGED session for the new event, not be silently swallowed.
+  it('a LOGOUT arriving long after a session was auto-flagged creates a new orphan session', async () => {
+    const employee = await prisma.employee.create({
+      data: { externalId: 'EMP_OLD_FLAG', name: 'Old Flag Guy', source: 'manual' },
+    })
+    const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000)
+
+    await webhook(
+      validPayload({
+        employee_external_id: 'EMP_OLD_FLAG',
+        event_type: 'LOGIN',
+        event_time: twentyHoursAgo.toISOString(),
+        event_id: 'evt_old_flag_login',
+      })
+    )
+
+    const openSession = await prisma.attendanceSession.findFirstOrThrow({ where: { employeeId: employee.id } })
+    await flagStaleOpenSessions()
+
+    // Push the flagged session's updated_at well outside the race window so
+    // the upcoming LOGOUT can't be mistaken for a live race with the sweep.
+    await prisma.$executeRaw`UPDATE attendance_sessions SET updated_at = ${new Date(Date.now() - 60_000)} WHERE id = ${openSession.id}`
+
+    const res = await webhook(
+      validPayload({
+        employee_external_id: 'EMP_OLD_FLAG',
+        event_type: 'LOGOUT',
+        event_time: new Date().toISOString(),
+        event_id: 'evt_old_flag_logout',
+      })
+    )
+    expect(res.status).toBe(200)
+
+    const sessions = await prisma.attendanceSession.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: 'asc' },
+    })
+    expect(sessions).toHaveLength(2)
+    expect(sessions[0].id).toBe(openSession.id)
+    expect(sessions[0].status).toBe('FLAGGED')
+    expect(sessions[0].logoutTime).toBeNull()
+    expect(sessions[1].status).toBe('FLAGGED')
+    expect(sessions[1].loginTime).toBeNull()
+    expect(sessions[1].logoutTime).not.toBeNull()
+  })
+
+  // Regression test: concurrent first-ever LOGINs for the same employee (no
+  // existing row to lock via SELECT ... FOR UPDATE) must not create more
+  // than one OPEN session -- the per-employee advisory lock should
+  // serialize them so exactly one session ends up OPEN. A single pair of
+  // concurrent requests rarely lands in the race window at HTTP round-trip
+  // granularity, so this fires enough concurrent LOGINs to reliably force
+  // it.
+  it('concurrent first-ever LOGINs for the same employee do not create duplicate OPEN sessions', async () => {
+    await prisma.employee.create({
+      data: { externalId: 'EMP_CONCURRENT_LOGIN', name: 'Concurrent Guy', source: 'manual' },
+    })
+    const employee = await prisma.employee.findFirstOrThrow({ where: { externalId: 'EMP_CONCURRENT_LOGIN' } })
+    const now = new Date().toISOString()
+    const concurrentLogins = 10
+
+    const results = await Promise.all(
+      Array.from({ length: concurrentLogins }, (_, i) =>
+        webhook(
+          validPayload({
+            employee_external_id: 'EMP_CONCURRENT_LOGIN',
+            event_type: 'LOGIN',
+            event_time: now,
+            event_id: `evt_concurrent_login_${i}`,
+          })
+        )
+      )
+    )
+
+    results.forEach((res) => expect(res.status).toBe(200))
+
+    const sessions = await prisma.attendanceSession.findMany({ where: { employeeId: employee.id } })
+    expect(sessions).toHaveLength(concurrentLogins)
+    const openSessions = sessions.filter((s) => s.status === 'OPEN')
+    expect(openSessions).toHaveLength(1)
+  })
+
   // T8 test case: "Session OPEN từ 20 giờ trước (giả lập bằng cách chỉnh
   // login_time trong test), chạy job quét -> session chuyển FLAGGED."
   it('flags a session open past the stale threshold when the sweep job runs', async () => {
