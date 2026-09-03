@@ -9,3 +9,10 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Placeholder so `prisma generate` has at least one model to emit a client
+// from; Prisma refuses to generate anything for a schema with zero models.
+// T1 replaces this with the real data model and removes it.
+model Placeholder {
+  id Int @id @default(autoincrement())
+}
