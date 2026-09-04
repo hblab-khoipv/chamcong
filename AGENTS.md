@@ -96,9 +96,13 @@ deterministically (read config, mutate the DB out from under it, then
 persist) instead of relying on real concurrency timing.
 
 `PATCH /attendance-sessions/:id` (T11) edits `login_time`/`logout_time`
-(required to fill in a FLAGGED session's missing side), always sets
-`status=MANUAL` on success (the chosen convention for "hand-corrected"),
-rejects `logout_time <= login_time` and overlaps with another session for
+(required to fill in a FLAGGED session's missing side), sets
+`status=MANUAL` on success only when the edit leaves both `login_time`
+and `logout_time` non-null (the chosen convention for "hand-corrected" —
+a partial edit that still leaves one side null, e.g. fixing `login_time`
+on a still-OPEN session, leaves status unchanged so the session stays in
+the OPEN/FLAGGED lifecycle `attendanceSession.ts` keys off of), rejects
+`logout_time <= login_time` and overlaps with another session for
 the same employee, then calls `recomputeSessionSegments`. `POST
 /attendance-sessions/:id/recompute` re-runs it against current config on
 demand and requires `{ confirm: true }` in the body (400 otherwise) since it
