@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { holidaysApi } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
 import type { Holiday } from '../../api/types'
@@ -18,13 +18,24 @@ export function HolidaysPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  const hasAutoJumpedToMonth = useRef(false)
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     holidaysApi
       .list(year)
       .then(({ holidays: list }) => {
-        if (!cancelled) setHolidays(list)
+        if (cancelled) return
+        setHolidays(list)
+        // On first load, point the mini calendar at the earliest configured
+        // holiday's month instead of always defaulting to today's month, so
+        // a year with holidays outside the current month is visible.
+        if (!hasAutoJumpedToMonth.current && list.length > 0) {
+          hasAutoJumpedToMonth.current = true
+          const earliest = [...list].sort((a, b) => a.holidayDate.localeCompare(b.holidayDate))[0]
+          setMonth(Number(earliest.holidayDate.slice(5, 7)))
+        }
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách ngày lễ.')
