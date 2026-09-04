@@ -97,9 +97,8 @@ chamcong/
 ├── backend/          # Node.js + Express + Prisma API server
 │   ├── prisma/       # Schema và migrations
 │   └── src/
-│       ├── lib/      # Prisma client, utilities
+│       ├── lib/      # Prisma client, utilities, business logic
 │       ├── routes/   # Express route handlers
-│       ├── services/ # Business logic (T7 onwards)
 │       └── tests/    # Vitest tests
 ├── frontend/         # React + Vite admin UI
 │   └── src/
@@ -132,6 +131,10 @@ chamcong/
 | POST | /holidays | Có | Tạo ngày lễ (chặn trùng `holiday_date`) |
 | PATCH | /holidays/:id | Có | Sửa ngày lễ |
 | DELETE | /holidays/:id | Có | Vô hiệu hoá ngày lễ (soft-delete/deactivate) |
+| POST | /webhooks/attendance | Không | Nhận sự kiện login/logout từ app bán hàng (xác thực sẽ làm ở T17) |
+| GET | /attendance-events/unmatched | Có | Danh sách sự kiện chưa khớp được nhân viên |
+| POST | /attendance-events/:id/reprocess | Có | Xử lý lại một sự kiện sau khi đã gán `external_id` |
+| GET | /attendance-sessions | Có | Danh sách phiên chấm công (filter `status`, `employeeId`) |
 
 Auth: gửi header `Authorization: Bearer <token>` (token nhận từ `POST /auth/login`).
 
@@ -147,9 +150,9 @@ Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và 
 - [x] T3 — Quản lý Nhân viên
 - [x] T4 — Quản lý Khung giờ tính giá
 - [x] T5 — Quản lý Ngày lễ
-- [ ] T6 — Webhook nhận sự kiện chấm công
-- [ ] T7 — Khớp nhân viên
-- [ ] T8 — Vòng đời phiên chấm công
+- [x] T6 — Webhook nhận sự kiện chấm công
+- [x] T7 — Khớp nhân viên
+- [x] T8 — Vòng đời phiên chấm công
 - [ ] T9 — Rate Splitting Engine
 - [ ] T10 — Trigger tính toán
 - [ ] T11 — Sửa tay & tính lại

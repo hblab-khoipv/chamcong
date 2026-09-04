@@ -65,6 +65,46 @@ wired into `attendance_sessions`/`attendance_session_segments` yet — that
 integration is T9's rate splitting engine. T9 should call these rather than
 reimplementing the PERCENT/FIXED math.
 
+## Router mount order in app.ts matters
+
+Every router in `backend/src/app.ts` is mounted with `app.use(router)` (no
+path prefix) and each protected router calls `router.use(authenticate)`
+unconditionally — so a router mounted earlier intercepts *every* request
+path, not just its own, and 401s before Express ever reaches a later
+router. Any new unauthenticated route (like `POST /webhooks/attendance`,
+T6) must be mounted before all `authenticate`-guarded routers, not just in
+whatever position feels natural.
+
+## Attendance webhook → session pipeline (T6-T8)
+
+`POST /webhooks/attendance` (`backend/src/routes/webhooks.ts`, no auth —
+`verifyWebhookAuth()` in `lib/webhookAuth.ts` is a T17 placeholder) does
+idempotent intake (`dedupe_key`) into `attendance_events`, then calls
+`lib/attendanceProcessing.ts#processAttendanceEvent` synchronously before
+responding — no queue. That function chains `lib/employeeMatching.ts`
+(T7: match/auto-create by `external_id`, else `UNMATCHED`) and
+`lib/attendanceSession.ts` (T8: LOGIN/LOGOUT pairing, orphan/missing-logout
+FLAGGED sessions, hourly stale-session sweep). The same
+`processAttendanceEvent` path is reused by `POST
+/attendance-events/:id/reprocess`, so a manually-linked employee replays
+through identical logic. `AUTO_CREATE_EMPLOYEE_ON_WEBHOOK` and
+`ATTENDANCE_SESSION_STALE_HOURS` (`lib/config.ts`) are plain env vars, not
+a Settings entity/UI — that doesn't exist until T14 (Phase 5).
+
+## Session state transitions use SELECT ... FOR UPDATE, not read-then-write
+
+`lib/attendanceSession.ts`'s LOGIN/LOGOUT handlers and the stale-flag sweep
+each wrap their session read+write in `prisma.$transaction`, locking the
+target row with a raw `SELECT ... FOR UPDATE` before deciding what to do,
+then writing through `tx.attendanceSession.update(...)`. This is what makes
+the LOGOUT-vs-stale-sweep race (T8) safe: two concurrent transactions
+touching the same row serialize on the row lock, so whichever commits
+first is what the other sees when it re-reads the row after acquiring the
+lock — the loser reacts to the winner's outcome instead of overwriting it.
+LOGIN/LOGOUT additionally take a per-employee `pg_advisory_xact_lock`
+before the row lock, since a brand-new employee has no existing row to
+lock two concurrent first-ever LOGINs against.
+
 ## Auth model
 
 JWT is stateless (no server-side session/blacklist) — `POST /auth/logout` is
