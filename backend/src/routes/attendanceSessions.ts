@@ -48,8 +48,11 @@ async function serializeWithSegments(session: AttendanceSession) {
 }
 
 // Half-open interval overlap: a session with no logout_time yet (OPEN) is
-// treated as extending indefinitely into the future for this check.
+// treated as extending indefinitely into the future for this check, and a
+// logout-only orphan (login_time still null) is treated as extending
+// indefinitely into the past.
 const FAR_FUTURE = new Date(8_640_000_000_000_000)
+const FAR_PAST = new Date(-8_640_000_000_000_000)
 
 async function findOverlappingSession(
   employeeId: string,
@@ -58,11 +61,15 @@ async function findOverlappingSession(
   excludeId: string
 ): Promise<AttendanceSession | null> {
   const candidates = await prisma.attendanceSession.findMany({
-    where: { employeeId, id: { not: excludeId }, loginTime: { not: null } },
+    where: {
+      employeeId,
+      id: { not: excludeId },
+      OR: [{ loginTime: { not: null } }, { logoutTime: { not: null } }],
+    },
   })
   return (
     candidates.find((s) => {
-      const otherStart = s.loginTime as Date
+      const otherStart = s.loginTime ?? FAR_PAST
       const otherEnd = s.logoutTime ?? FAR_FUTURE
       return loginTime < otherEnd && otherStart < logoutTime
     }) ?? null
@@ -87,10 +94,13 @@ router.get('/attendance-sessions', async (req: AuthenticatedRequest, res: Respon
 })
 
 // T11 item 1: Admin edits login_time/logout_time (required to fill in a
-// FLAGGED session's missing side). Any successful edit here marks the
-// session MANUAL — the chosen convention (documented per T11 acceptance
-// criteria's "MANUAL hoặc CLOSED tuỳ quy ước đã chọn") for "this session's
-// times were hand-corrected", regardless of what it was before.
+// FLAGGED session's missing side). A successful edit that leaves both
+// login_time and logout_time populated marks the session MANUAL — the
+// chosen convention (documented per T11 acceptance criteria's "MANUAL
+// hoặc CLOSED tuỳ quy ước đã chọn") for "this session's times were
+// hand-corrected". An edit that still leaves one side null (e.g. fixing
+// login_time on a still-OPEN session) leaves status unchanged so the
+// session stays in the OPEN/FLAGGED lifecycle T8 keys off of.
 router.patch('/attendance-sessions/:id', async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params
   const existing = await prisma.attendanceSession.findUnique({ where: { id } })
@@ -143,7 +153,7 @@ router.patch('/attendance-sessions/:id', async (req: AuthenticatedRequest, res: 
 
   await prisma.attendanceSession.update({
     where: { id },
-    data: { loginTime, logoutTime, status: 'MANUAL' },
+    data: { loginTime, logoutTime, ...(loginTime && logoutTime ? { status: 'MANUAL' as const } : {}) },
   })
   // T11 item 2: re-trigger T9, overwriting the previous segments.
   const updated = await recomputeSessionSegments(id)
