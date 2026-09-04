@@ -35,6 +35,40 @@ export function toMinutes(date: Date): number {
   return date.getUTCHours() * 60 + date.getUTCMinutes()
 }
 
+// Vietnam has a single fixed UTC+7 offset, no DST (PRD assumption #4).
+// login_time/logout_time are stored as real UTC instants, so the rate
+// engine (T9) needs to know which VN wall-clock minute-of-day and which VN
+// calendar day an instant falls on — these three helpers are that bridge.
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
+
+// Returns a Date whose UTC getters read as VN wall-clock time for `date`.
+// Not a real instant — a shifted view used only to read Y/M/D/H/M via
+// getUTC*() without a timezone library.
+function shiftToVnWallClock(date: Date): Date {
+  return new Date(date.getTime() + VN_OFFSET_MS)
+}
+
+// Minutes since VN midnight (0-1439) that `date` falls in.
+export function vnMinutesOfDay(date: Date): number {
+  const shifted = shiftToVnWallClock(date)
+  return shifted.getUTCHours() * 60 + shifted.getUTCMinutes()
+}
+
+// The VN calendar day `date` falls on, as a date-only UTC instant (e.g.
+// 2026-08-30T00:00:00Z labels "August 30, 2026 VN time") — the same
+// representation `holidays.holiday_date` is stored in, so the two compare
+// directly with getTime().
+export function vnCalendarDayLabel(date: Date): Date {
+  const shifted = shiftToVnWallClock(date)
+  return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()))
+}
+
+// The real UTC instant of VN midnight (00:00 VN time) for the calendar day
+// identified by `dayLabel` (as returned by vnCalendarDayLabel).
+export function vnDayStartInstant(dayLabel: Date): Date {
+  return new Date(dayLabel.getTime() - VN_OFFSET_MS)
+}
+
 export type MinuteInterval = [number, number]
 
 export function bandIntervals(startMinutes: number, endMinutes: number): MinuteInterval[] {

@@ -29,7 +29,12 @@ hand-written `down.sql` alongside Prisma's generated `migration.sql` — keep
 them in sync manually when editing `schema.prisma`. Apply a down migration
 with `npm run db:migrate:down --workspace=backend` (`backend/scripts/migrate-down.ts`),
 which also deletes the migration's `_prisma_migrations` row so
-`prisma migrate deploy` can re-apply it cleanly afterward.
+`prisma migrate deploy` can re-apply it cleanly afterward. It reverts
+*one* migration at a time (defaulting to the newest); `src/tests/
+migration.test.ts`'s full up/down cycle test reverts every migration folder
+individually in reverse order to tear the schema all the way down — update
+that loop, not a single `migrate-down.ts` call, if a full-teardown test ever
+needs to change.
 
 ## Rate band time-of-day convention
 
@@ -56,14 +61,51 @@ the PRD treats holiday delete/deactivate as the same operation, so there is
 no hard-delete path for holidays. Don't assume the two DELETE endpoints
 behave the same way.
 
-## Holiday rate calc is a standalone stub until T9
+## Rate splitting engine (T9) and its DB wiring (T10/T11)
 
-`backend/src/lib/holidayRate.ts` has `getActiveHolidayForDate` (the
-internal "check if a date is a holiday" lookup the PRD describes for T5
-item 6) and `applyHolidayRate` (pure PERCENT/FIXED arithmetic). Neither is
-wired into `attendance_sessions`/`attendance_session_segments` yet — that
-integration is T9's rate splitting engine. T9 should call these rather than
-reimplementing the PERCENT/FIXED math.
+`backend/src/lib/rateSplitting.ts#splitSessionIntoSegments` is the whole
+money-calculation algorithm as a pure function (`(login_time, logout_time,
+active rate bands, active holidays) -> segments[]`, no DB access, no
+Date.now()) — split at VN-midnight boundaries first, then rate-band
+boundaries within each day, then holiday rate within each resulting
+segment; an uncovered minute becomes a `rate_band_id=null`/`rate_applied=0`
+segment plus a warning rather than being dropped. It owns the PERCENT/FIXED
+arithmetic (`applyHolidayRateToBase`); `lib/holidayRate.ts#applyHolidayRate`
+(T5) delegates to it so the two never drift apart. `lib/timeOfDay.ts`'s
+`vnMinutesOfDay`/`vnCalendarDayLabel`/`vnDayStartInstant` bridge UTC-stored
+`login_time`/`logout_time` instants to VN wall-clock minutes/calendar days
+(VN is fixed UTC+7, no DST) — `vnCalendarDayLabel`'s output is deliberately
+the same date-only-UTC-instant shape as `holidays.holiday_date`, so the two
+compare with a plain `getTime()`.
+
+`backend/src/lib/sessionRateEngine.ts#recomputeSessionSegments` is the one
+DB-wiring entry point that (re)runs the engine against *currently* active
+rate bands/holidays and overwrites a session's segments, snapshotting
+`rate_applied_vnd`/`amount_vnd` at write time — later config edits never
+touch already-computed sessions. It's reused by three callers: `lib/
+attendanceSession.ts#handleLogoutEvent` (T10, fires the moment a session
+transitions to CLOSED), and the T11 routes below. Any failure (e.g. a rate
+band deleted between reading the active-config snapshot and writing
+segments — the FK on `attendance_session_segments.rate_band_id`) is caught
+and recorded as `attendance_sessions.computation_error`/
+`computation_error_message` instead of throwing; the session keeps
+whatever status it already had. `fetchActiveRateConfig` and
+`persistSegmentsOrFlagError` are exported separately from
+`recomputeSessionSegments` specifically so this race can be tested
+deterministically (read config, mutate the DB out from under it, then
+persist) instead of relying on real concurrency timing.
+
+`PATCH /attendance-sessions/:id` (T11) edits `login_time`/`logout_time`
+(required to fill in a FLAGGED session's missing side), always sets
+`status=MANUAL` on success (the chosen convention for "hand-corrected"),
+rejects `logout_time <= login_time` and overlaps with another session for
+the same employee, then calls `recomputeSessionSegments`. `POST
+/attendance-sessions/:id/recompute` re-runs it against current config on
+demand and requires `{ confirm: true }` in the body (400 otherwise) since it
+can silently change historical totals. Both audit-log
+before/after + `admin.id` via the standard `audit_logs` table — query it
+directly (as existing tests do) rather than via a dedicated endpoint; none
+exists.
 
 ## Router mount order in app.ts matters
 

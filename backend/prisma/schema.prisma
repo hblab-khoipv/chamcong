@@ -134,6 +134,10 @@ model AttendanceSession {
   totalHours     Decimal                 @default(0) @map("total_hours") @db.Decimal(10, 2)
   totalAmountVnd Int                     @default(0) @map("total_amount_vnd")
   computedAt     DateTime?               @map("computed_at")
+  // T10 item 3: set instead of crashing when the rate engine (T9) fails
+  // (e.g. a referenced rate band was deleted mid-computation).
+  computationError        Boolean @default(false) @map("computation_error")
+  computationErrorMessage String? @map("computation_error_message")
   createdAt      DateTime                @default(now()) @map("created_at")
   updatedAt      DateTime                @updatedAt @map("updated_at")
 
