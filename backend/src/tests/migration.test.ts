@@ -3,6 +3,7 @@
 // doesn't disturb the shared `public` schema other integration tests use.
 import { execSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { Client } from 'pg'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -63,11 +64,22 @@ describe('T1 migration up/down', () => {
       expect(tablesAfterUp).toContain(table)
     }
 
-    execSync(`npx tsx scripts/migrate-down.ts --schema ${schemaName}`, {
-      cwd: BACKEND_DIR,
-      env: { ...process.env, DATABASE_URL: baseUrl },
-      stdio: 'pipe',
-    })
+    // migrate-down.ts reverts one migration at a time (per its documented
+    // contract — see AGENTS.md), so a full teardown needs each migration
+    // folder reverted individually, newest first.
+    const migrationNames = readdirSync(join(BACKEND_DIR, 'prisma', 'migrations'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort()
+      .reverse()
+
+    for (const migrationName of migrationNames) {
+      execSync(`npx tsx scripts/migrate-down.ts ${migrationName} --schema ${schemaName}`, {
+        cwd: BACKEND_DIR,
+        env: { ...process.env, DATABASE_URL: baseUrl },
+        stdio: 'pipe',
+      })
+    }
 
     const tablesAfterDown = await tablesInSchema(baseUrl, schemaName)
     for (const table of EXPECTED_TABLES) {

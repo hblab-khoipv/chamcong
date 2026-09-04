@@ -135,6 +135,8 @@ chamcong/
 | GET | /attendance-events/unmatched | Có | Danh sách sự kiện chưa khớp được nhân viên |
 | POST | /attendance-events/:id/reprocess | Có | Xử lý lại một sự kiện sau khi đã gán `external_id` |
 | GET | /attendance-sessions | Có | Danh sách phiên chấm công (filter `status`, `employeeId`) |
+| PATCH | /attendance-sessions/:id | Có | Sửa `login_time`/`logout_time`, tính lại segment (T9) |
+| POST | /attendance-sessions/:id/recompute | Có | Tính lại segment theo cấu hình hiện tại (yêu cầu `{ confirm: true }`) |
 
 Auth: gửi header `Authorization: Bearer <token>` (token nhận từ `POST /auth/login`).
 
@@ -153,8 +155,8 @@ Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và 
 - [x] T6 — Webhook nhận sự kiện chấm công
 - [x] T7 — Khớp nhân viên
 - [x] T8 — Vòng đời phiên chấm công
-- [ ] T9 — Rate Splitting Engine
-- [ ] T10 — Trigger tính toán
-- [ ] T11 — Sửa tay & tính lại
+- [x] T9 — Rate Splitting Engine
+- [x] T10 — Trigger tính toán
+- [x] T11 — Sửa tay & tính lại
 - [ ] T12–T16 — Giao diện Admin
 - [ ] T17–T19 — Vận hành & triển khai

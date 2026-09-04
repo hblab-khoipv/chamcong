@@ -1,6 +1,7 @@
 import { AttendanceSession } from '@prisma/client'
 import { prisma } from './db'
 import { getSessionStaleThresholdHours } from './config'
+import { recomputeSessionSegments } from './sessionRateEngine'
 
 interface SessionLockRow {
   id: string
@@ -83,7 +84,7 @@ export async function handleLoginEvent(employeeId: string, eventTime: Date): Pro
 // create a fresh orphan FLAGGED session, per T8's unconditional "LOGOUT
 // with no OPEN session -> create orphan FLAGGED session" rule.
 export async function handleLogoutEvent(employeeId: string, eventTime: Date): Promise<AttendanceSession> {
-  return prisma.$transaction(async (tx) => {
+  const { sessionId, closed } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employeeId}))`
 
     const rows = await tx.$queryRaw<SessionLockRow[]>`
@@ -109,7 +110,7 @@ export async function handleLogoutEvent(employeeId: string, eventTime: Date): Pr
           after: { status: 'CLOSED', logoutTime: eventTime.toISOString() },
         },
       })
-      return tx.attendanceSession.findUniqueOrThrow({ where: { id: mostRecent.id } })
+      return { sessionId: mostRecent.id, closed: true }
     }
 
     if (
@@ -122,7 +123,7 @@ export async function handleLogoutEvent(employeeId: string, eventTime: Date): Pr
       // (the stale-flag sweep got there first). That transition already
       // stands; report its current state instead of spawning a duplicate
       // for the same shift.
-      return tx.attendanceSession.findUniqueOrThrow({ where: { id: mostRecent.id } })
+      return { sessionId: mostRecent.id, closed: false }
     }
 
     const session = await tx.attendanceSession.create({
@@ -136,8 +137,15 @@ export async function handleLogoutEvent(employeeId: string, eventTime: Date): Pr
         after: { status: 'FLAGGED', logoutTime: eventTime.toISOString(), reason: 'logout with no open login session' },
       },
     })
-    return session
+    return { sessionId: session.id, closed: false }
   })
+
+  // T10 item 1: trigger the rate engine immediately on CLOSED, outside the
+  // locking transaction above (its own transaction, in sessionRateEngine.ts).
+  if (closed) {
+    return recomputeSessionSegments(sessionId)
+  }
+  return prisma.attendanceSession.findUniqueOrThrow({ where: { id: sessionId } })
 }
 
 // T8 item 3: periodic sweep — flags OPEN sessions that have been open

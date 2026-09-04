@@ -1,5 +1,6 @@
 import { Holiday } from '@prisma/client'
 import { prisma } from './db'
+import { applyHolidayRateToBase } from './rateSplitting'
 
 // Internal equivalent of "GET /holidays/:date" (T5 item 6) — used by the
 // rate engine (T9, not yet built) to check whether a calendar date is a
@@ -10,14 +11,10 @@ export async function getActiveHolidayForDate(date: Date): Promise<Holiday | nul
   return prisma.holiday.findFirst({ where: { holidayDate: dayStart, active: true } })
 }
 
-// Pure arithmetic for T5's PERCENT/FIXED semantics (yêu cầu chức năng #3-4):
-// PERCENT scales the rate band's own hourly rate; FIXED overrides it
-// entirely. Wiring this into actual attendance session segments is T9's
-// rate splitting engine (out of scope here) — this is the calculation it
-// will call.
+// T5's PERCENT/FIXED semantics (yêu cầu chức năng #3-4): PERCENT scales the
+// rate band's own hourly rate; FIXED overrides it entirely. Delegates to the
+// T9 rate splitting engine's copy of this arithmetic (rateSplitting.ts) so
+// the two never drift apart.
 export function applyHolidayRate(baseRatePerHourVnd: number, holiday: Pick<Holiday, 'rateType' | 'rateValue'>): number {
-  if (holiday.rateType === 'FIXED') {
-    return Number(holiday.rateValue)
-  }
-  return Math.round((baseRatePerHourVnd * Number(holiday.rateValue)) / 100)
+  return applyHolidayRateToBase(baseRatePerHourVnd, { rateType: holiday.rateType, rateValue: Number(holiday.rateValue) })
 }

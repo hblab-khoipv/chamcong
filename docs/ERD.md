@@ -65,6 +65,8 @@ erDiagram
         decimal total_hours
         decimal total_amount_vnd
         datetime computed_at
+        bool computation_error "true nếu rate engine (T9) lỗi khi tính, xem T10"
+        string computation_error_message "null nếu không lỗi"
     }
     ATTENDANCE_SESSION_SEGMENT {
         uuid id
