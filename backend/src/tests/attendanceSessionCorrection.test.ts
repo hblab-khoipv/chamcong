@@ -181,6 +181,47 @@ describe('T11 manual correction & recompute', () => {
     expect(after.status).toBe('MANUAL')
   })
 
+  // Round-1 fix regression: a partial edit that still leaves one side null
+  // must not be misrepresented as MANUAL -- the session must stay in the
+  // OPEN/FLAGGED lifecycle attendanceSession.ts keys off of.
+  it('leaves status unchanged when a PATCH still leaves logout_time null', async () => {
+    const employee = await prisma.employee.create({ data: { name: 'Emp', source: 'manual' } })
+    const open = await prisma.attendanceSession.create({
+      data: { employeeId: employee.id, loginTime: new Date('2026-01-05T09:00:00+07:00'), logoutTime: null, status: 'OPEN' },
+    })
+
+    const res = await patch(`/attendance-sessions/${open.id}`).send({ login_time: '2026-01-05T09:05:00+07:00' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.attendanceSession.status).toBe('OPEN')
+
+    const updated = await prisma.attendanceSession.findUniqueOrThrow({ where: { id: open.id } })
+    expect(updated.status).toBe('OPEN')
+    expect(updated.logoutTime).toBeNull()
+  })
+
+  // Round-1 fix regression: findOverlappingSession must also catch orphan
+  // sessions that only have logout_time set (login_time still null).
+  it('rejects a PATCH that would overlap an existing logout-only orphan session', async () => {
+    const employee = await prisma.employee.create({ data: { name: 'Emp', source: 'manual' } })
+    await prisma.attendanceSession.create({
+      data: { employeeId: employee.id, loginTime: null, logoutTime: new Date('2026-01-05T15:00:00+07:00'), status: 'FLAGGED' },
+    })
+    const target = await prisma.attendanceSession.create({
+      data: {
+        employeeId: employee.id,
+        loginTime: new Date('2026-01-05T20:00:00+07:00'),
+        logoutTime: new Date('2026-01-05T22:00:00+07:00'),
+        status: 'CLOSED',
+      },
+    })
+
+    const res = await patch(`/attendance-sessions/${target.id}`).send({ login_time: '2026-01-05T14:00:00+07:00' })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/overlap/i)
+  })
+
   // T11 acceptance: "Kiểm tra quyền: chỉ Admin đã đăng nhập mới gọi được các API này."
   it('rejects PATCH and recompute without a valid admin token', async () => {
     const employee = await prisma.employee.create({ data: { name: 'Emp', source: 'manual' } })
