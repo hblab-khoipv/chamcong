@@ -159,5 +159,9 @@ Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và 
 - [x] T9 — Rate Splitting Engine
 - [x] T10 — Trigger tính toán
 - [x] T11 — Sửa tay & tính lại
-- [ ] T12–T16 — Giao diện Admin
+- [x] T12 — Đăng nhập & Dashboard tổng quan
+- [x] T13 — Giao diện quản lý Nhân viên
+- [x] T14 — Giao diện quản lý Khung giờ & Ngày lễ
+- [x] T15 — Giao diện xem & xử lý Chấm công
+- [ ] T16 — Báo cáo & xuất dữ liệu lương
 - [ ] T17–T19 — Vận hành & triển khai
