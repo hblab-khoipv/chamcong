@@ -11,7 +11,7 @@ export function HolidaysPage() {
   const [year, setYear] = useState(CURRENT_YEAR)
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [holidays, setHolidays] = useState<Holiday[]>([])
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null)
@@ -22,7 +22,7 @@ export function HolidaysPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    setLoadError(null)
     holidaysApi
       .list(year)
       .then(({ holidays: list }) => {
@@ -41,7 +41,7 @@ export function HolidaysPage() {
         if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách ngày lễ.')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setInitialLoading(false)
       })
     return () => {
       cancelled = true
@@ -109,12 +109,17 @@ export function HolidaysPage() {
 
   const activeHolidays = holidays.filter((h) => h.active)
 
-  if (loading) return <p>Đang tải...</p>
-  if (loadError) return <p role="alert" className="form-error">{loadError}</p>
+  if (initialLoading) return <p>Đang tải...</p>
 
   return (
     <div>
       <h1>Ngày lễ</h1>
+
+      {loadError && (
+        <p role="alert" className="form-error">
+          {loadError}
+        </p>
+      )}
 
       <MiniCalendar
         year={year}
@@ -191,7 +196,14 @@ export function HolidaysPage() {
                 </td>
                 <td>
                   <div className="row-actions">
-                    <button type="button" className="btn btn-secondary btn-small" onClick={() => setEditingHoliday(holiday)}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => {
+                        setShowCreateForm(false)
+                        setEditingHoliday(holiday)
+                      }}
+                    >
                       Sửa
                     </button>
                     {holiday.active && (

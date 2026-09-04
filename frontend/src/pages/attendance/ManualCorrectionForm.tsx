@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { attendanceSessionsApi } from '../../api/endpoints'
 import type { AttendanceSession, AttendanceSessionWithSegments } from '../../api/types'
 import { toVnDatetimeLocalInput, vnDatetimeLocalInputToIso } from '../../lib/vnTime'
+import { ComputationErrorNotice } from './ComputationErrorNotice'
 import { SegmentsTable } from './SegmentsTable'
 
 interface ManualCorrectionFormProps {
@@ -76,6 +77,7 @@ export function ManualCorrectionForm({ session, onSaved, onCancel }: ManualCorre
       {result && (
         <div>
           <p className="form-success">Đã lưu. Trạng thái mới: {result.status}.</p>
+          <ComputationErrorNotice session={result} />
           <SegmentsTable segments={result.segments} totalHours={result.totalHours} totalAmountVnd={result.totalAmountVnd} />
         </div>
       )}

@@ -168,7 +168,14 @@ export function EmployeesPage() {
               </td>
               <td>
                 <div className="row-actions">
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => setEditingEmployee(employee)}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setEditingEmployee(employee)
+                    }}
+                  >
                     Sửa
                   </button>
                   {employee.active ? (

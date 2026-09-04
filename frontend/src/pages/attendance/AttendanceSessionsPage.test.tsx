@@ -65,4 +65,27 @@ describe('AttendanceSessionsPage', () => {
       expect(rows).toHaveLength(1)
     })
   })
+
+  it('phiên tính lại thất bại → đánh dấu số tiền là kết quả cũ ngay trên danh sách', async () => {
+    const failed = session({
+      id: 'sess-failed',
+      computationError: true,
+      computationErrorMessage: 'Rate band no longer exists',
+    })
+    mockApi(({ method, pathname }) => {
+      if (method === 'GET' && pathname === '/api/employees') return { status: 200, body: { employees: EMPLOYEES } }
+      if (method === 'GET' && pathname === '/api/attendance-sessions') {
+        return { status: 200, body: { attendanceSessions: [failed, session({ id: 'sess-ok', employeeId: 'emp-2' })] } }
+      }
+      return undefined
+    })
+
+    renderWithProviders(<AttendanceSessionsPage />, { authenticated: true })
+
+    await waitFor(() => expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument())
+    const flags = screen.getAllByLabelText(/Tính lại tiền công thất bại/)
+    expect(flags).toHaveLength(1)
+    expect(flags[0].closest('tr')).toHaveTextContent('Nguyễn Văn A')
+    expect(flags[0]).toHaveAttribute('title', 'Rate band no longer exists')
+  })
 })

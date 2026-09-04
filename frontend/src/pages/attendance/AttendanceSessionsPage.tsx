@@ -4,6 +4,7 @@ import { attendanceSessionsApi, employeesApi } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
 import type { AttendanceSession, AttendanceSessionStatus, Employee } from '../../api/types'
 import { formatVnDateTime, formatVnMoney, vnDateKey } from '../../lib/vnTime'
+import { COMPUTATION_ERROR_TEXT } from './ComputationErrorNotice'
 import { SessionStatusBadge } from './SessionStatusBadge'
 
 const STATUS_OPTIONS: Array<{ value: AttendanceSessionStatus | ''; label: string }> = [
@@ -132,7 +133,20 @@ export function AttendanceSessionsPage() {
                   <SessionStatusBadge status={session.status} />
                 </td>
                 <td>{session.totalHours.toFixed(2)}</td>
-                <td>{formatVnMoney(session.totalAmountVnd)}</td>
+                <td>
+                  {formatVnMoney(session.totalAmountVnd)}
+                  {session.computationError && (
+                    <span
+                      role="img"
+                      className="computation-error-flag"
+                      aria-label={`${COMPUTATION_ERROR_TEXT} (${employeesById.get(session.employeeId)?.name ?? session.employeeId})`}
+                      title={session.computationErrorMessage ?? COMPUTATION_ERROR_TEXT}
+                    >
+                      {' '}
+                      ⚠
+                    </span>
+                  )}
+                </td>
                 <td>
                   <Link to={`/attendance/${session.id}`}>Xem chi tiết</Link>
                 </td>

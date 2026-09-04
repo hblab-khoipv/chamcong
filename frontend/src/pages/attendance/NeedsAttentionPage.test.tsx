@@ -176,7 +176,8 @@ describe('NeedsAttentionPage', () => {
       process.env.TZ = 'UTC'
     })
     afterAll(() => {
-      process.env.TZ = originalTz
+      if (originalTz === undefined) delete process.env.TZ
+      else process.env.TZ = originalTz
     })
 
     it('đổi sang phiên FLAGGED khác → form nạp lại đúng giờ VN của phiên đang chọn', async () => {
@@ -266,5 +267,33 @@ describe('NeedsAttentionPage', () => {
     await waitFor(() => expect(screen.queryByText(sibling.employeeExternalId)).not.toBeInTheDocument())
     expect(screen.getByText('Đã xử lý lại sự kiện.')).toBeInTheDocument()
     expect(screen.getByText('Sự kiện UNMATCHED (0)')).toBeInTheDocument()
+  })
+
+  it('xử lý lại trả về trạng thái ERROR → sự kiện vẫn nằm trong danh sách và báo lỗi', async () => {
+    mockApi(({ method, pathname }) => {
+      if (method === 'GET' && pathname === '/api/employees') return { status: 200, body: { employees: EMPLOYEES } }
+      if (method === 'GET' && pathname === '/api/attendance-sessions') {
+        return { status: 200, body: { attendanceSessions: [] } }
+      }
+      if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
+        return { status: 200, body: { attendanceEvents: [UNMATCHED_EVENT] } }
+      }
+      if (method === 'POST' && pathname === `/api/attendance-events/${UNMATCHED_EVENT.id}/reprocess`) {
+        return { status: 200, body: { attendanceEvent: { ...UNMATCHED_EVENT, processStatus: 'ERROR' } } }
+      }
+      return undefined
+    })
+
+    renderWithProviders(<NeedsAttentionPage />, { authenticated: true, route: '/attendance/needs-attention?tab=unmatched' })
+    const user = userEvent.setup()
+
+    await waitFor(() => expect(screen.getByText(UNMATCHED_EVENT.employeeExternalId)).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: `Xử lý lại sự kiện ${UNMATCHED_EVENT.id}` }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('trạng thái: ERROR')
+    // The failed event must stay visible: nothing else in the admin UI lists it.
+    expect(screen.getByText(UNMATCHED_EVENT.employeeExternalId)).toBeInTheDocument()
+    expect(screen.getByText('Sự kiện UNMATCHED (1)')).toBeInTheDocument()
+    expect(screen.queryByText('Đã xử lý lại sự kiện.')).not.toBeInTheDocument()
   })
 })

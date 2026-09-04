@@ -434,3 +434,13 @@ select {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.segment-uncovered {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.computation-error-flag {
+  color: #b45309;
+  cursor: help;
+}

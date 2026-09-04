@@ -146,7 +146,14 @@ export function RateBandsPage() {
               </td>
               <td>
                 <div className="row-actions">
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => setEditingBand(band)}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setEditingBand(band)
+                    }}
+                  >
                     Sửa
                   </button>
                   <button type="button" className="btn btn-danger btn-small" onClick={() => handleDelete(band)}>

@@ -70,12 +70,18 @@ export function NeedsAttentionPage() {
   const unlinkedEmployees = employees.filter((e) => e.externalId === null)
 
   function applyReprocessed(reprocessed: AttendanceEvent, successMessage: string) {
-    if (reprocessed.processStatus === 'UNMATCHED') {
+    if (reprocessed.processStatus !== 'PROCESSED') {
       setUnmatchedEvents((prev) => prev.map((e) => (e.id === reprocessed.id ? reprocessed : e)))
-      setMessage('Đã xử lý lại nhưng sự kiện vẫn chưa khớp được nhân viên.')
+      setMessage(null)
+      setActionError(
+        reprocessed.processStatus === 'UNMATCHED'
+          ? 'Đã xử lý lại nhưng sự kiện vẫn chưa khớp được nhân viên.'
+          : `Xử lý lại sự kiện thất bại (trạng thái: ${reprocessed.processStatus}), vui lòng kiểm tra lại.`
+      )
       return
     }
     setUnmatchedEvents((prev) => prev.filter((e) => e.id !== reprocessed.id))
+    setActionError(null)
     setMessage(successMessage)
   }
 

@@ -98,4 +98,30 @@ describe('HolidaysPage', () => {
 
     await waitFor(() => expect(screen.queryByTestId(`holiday-day-${YEAR}-01-01`)).not.toBeInTheDocument())
   })
+
+  it('gõ vào ô năm → ô lọc vẫn còn trên màn hình và giữ được focus khi tải lại', async () => {
+    const requestedYears: string[] = []
+    mockApi(({ method, pathname, search }) => {
+      if (method === 'GET' && pathname === '/api/holidays') {
+        const requested = search.get('year')
+        if (requested) requestedYears.push(requested)
+        return { status: 200, body: { holidays: requested === String(YEAR) ? [holiday()] : [] } }
+      }
+      return undefined
+    })
+
+    renderWithProviders(<HolidaysPage />, { authenticated: true })
+    const user = userEvent.setup()
+
+    await waitFor(() => expect(screen.getByLabelText('Năm')).toBeInTheDocument())
+    const yearInput = screen.getByLabelText('Năm')
+    // Editing the last digit of the year fires a refetch mid-edit; that
+    // refetch must not unmount the input the admin is typing into.
+    await user.type(yearInput, '{Backspace}7')
+
+    await waitFor(() => expect(requestedYears).toContain(`${YEAR + 1}`))
+    expect(screen.getByLabelText('Năm')).toBe(yearInput)
+    expect(yearInput).toHaveFocus()
+    expect(yearInput).toHaveValue(YEAR + 1)
+  })
 })
