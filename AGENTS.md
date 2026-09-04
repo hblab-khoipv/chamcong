@@ -189,15 +189,11 @@ sets `externalId`, it never flips `source` from `manual` to `synced`. Doing
 it this way is what makes "linking makes a manual employee read as synced"
 true in the UI without changing that endpoint's contract.
 
-**Known gap, not yet resolved:** there is no `GET /attendance-sessions/:id`
-(or any other read path that returns one session's segments without
-mutating it) — `serializeWithSegments` in `backend/src/routes/
-attendanceSessions.ts` is only reachable via the `PATCH` and `POST
-.../recompute` responses. This blocks a true read-only "view session
-detail with segment breakdown" screen (T15 scope item 2); T15's session
-list, needs-attention (FLAGGED/UNMATCHED), and manual-correction flows
-don't need it and are implemented. Add the read endpoint (or embed
-segments in the list response) before building that detail view.
+`GET /attendance-sessions/:id` (T15) is the one read-only place
+`serializeWithSegments` is reachable without mutating the session — every
+other caller (`PATCH`, `POST .../recompute`, both T11) changes the row it
+returns. Add new read-only session views against this endpoint, not by
+piggybacking on the mutating ones.
 
 ## Maintaining this file
 

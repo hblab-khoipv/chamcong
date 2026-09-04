@@ -93,6 +93,20 @@ router.get('/attendance-sessions', async (req: AuthenticatedRequest, res: Respon
   res.status(200).json({ attendanceSessions: sessions.map(serialize) })
 })
 
+// T15 item 2: read-only session detail with its segment-by-segment pay
+// breakdown, for the Admin UI's "view session" screen. Unlike the PATCH and
+// POST .../recompute handlers below -- the only other places segments are
+// serialized -- this never mutates the session.
+router.get('/attendance-sessions/:id', async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params
+  const session = await prisma.attendanceSession.findUnique({ where: { id } })
+  if (!session) {
+    res.status(404).json({ error: 'Attendance session not found' })
+    return
+  }
+  res.status(200).json({ attendanceSession: await serializeWithSegments(session) })
+})
+
 // T11 item 1: Admin edits login_time/logout_time (required to fill in a
 // FLAGGED session's missing side). A successful edit that leaves both
 // login_time and logout_time populated marks the session MANUAL — the

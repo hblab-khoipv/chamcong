@@ -8,6 +8,7 @@ import { EmployeesPage } from './pages/employees/EmployeesPage'
 import { RateBandsPage } from './pages/rateBands/RateBandsPage'
 import { HolidaysPage } from './pages/holidays/HolidaysPage'
 import { AttendanceSessionsPage } from './pages/attendance/AttendanceSessionsPage'
+import { SessionDetailPage } from './pages/attendance/SessionDetailPage'
 import { NeedsAttentionPage } from './pages/attendance/NeedsAttentionPage'
 import { ReportsPlaceholderPage } from './pages/ReportsPlaceholderPage'
 
@@ -25,6 +26,7 @@ function App() {
             <Route path="/holidays" element={<HolidaysPage />} />
             <Route path="/attendance" element={<AttendanceSessionsPage />} />
             <Route path="/attendance/needs-attention" element={<NeedsAttentionPage />} />
+            <Route path="/attendance/:id" element={<SessionDetailPage />} />
             <Route path="/reports" element={<ReportsPlaceholderPage />} />
           </Route>
         </Route>

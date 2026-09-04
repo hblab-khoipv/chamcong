@@ -88,6 +88,7 @@ export const attendanceSessionsApi = {
     apiGet<{ attendanceSessions: AttendanceSession[] }>(
       `/attendance-sessions${toQueryString({ status: filters.status, employeeId: filters.employeeId })}`
     ),
+  get: (id: string) => apiGet<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`),
   update: (id: string, input: { login_time?: string; logout_time?: string }) =>
     apiPatch<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`, input),
   recompute: (id: string) =>

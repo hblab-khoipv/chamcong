@@ -135,6 +135,7 @@ chamcong/
 | GET | /attendance-events/unmatched | Có | Danh sách sự kiện chưa khớp được nhân viên |
 | POST | /attendance-events/:id/reprocess | Có | Xử lý lại một sự kiện sau khi đã gán `external_id` |
 | GET | /attendance-sessions | Có | Danh sách phiên chấm công (filter `status`, `employeeId`) |
+| GET | /attendance-sessions/:id | Có | Chi tiết 1 phiên chấm công kèm breakdown segment (không sửa dữ liệu) |
 | PATCH | /attendance-sessions/:id | Có | Sửa `login_time`/`logout_time`, tính lại segment (T9) |
 | POST | /attendance-sessions/:id/recompute | Có | Tính lại segment theo cấu hình hiện tại (yêu cầu `{ confirm: true }`) |
 

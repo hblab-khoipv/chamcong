@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { attendanceSessionsApi, employeesApi } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
 import type { AttendanceSession, AttendanceSessionStatus, Employee } from '../../api/types'
@@ -118,6 +119,7 @@ export function AttendanceSessionsPage() {
               <th>Trạng thái</th>
               <th>Tổng giờ</th>
               <th>Tổng tiền</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -131,11 +133,14 @@ export function AttendanceSessionsPage() {
                 </td>
                 <td>{session.totalHours.toFixed(2)}</td>
                 <td>{formatVnMoney(session.totalAmountVnd)}</td>
+                <td>
+                  <Link to={`/attendance/${session.id}`}>Xem chi tiết</Link>
+                </td>
               </tr>
             ))}
             {visibleSessions.length === 0 && (
               <tr>
-                <td colSpan={6}>Không có phiên chấm công phù hợp.</td>
+                <td colSpan={7}>Không có phiên chấm công phù hợp.</td>
               </tr>
             )}
           </tbody>
