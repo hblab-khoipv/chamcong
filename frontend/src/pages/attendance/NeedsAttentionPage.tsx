@@ -19,7 +19,7 @@ export function NeedsAttentionPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [editingSession, setEditingSession] = useState<AttendanceSession | null>(null)
   const [linkingEventId, setLinkingEventId] = useState<string | null>(null)
   const [selectedEmployeeByEvent, setSelectedEmployeeByEvent] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
@@ -51,8 +51,11 @@ export function NeedsAttentionPage() {
   }
 
   function handleSessionSaved(updated: AttendanceSessionWithSegments) {
+    // Keep the form (and its recomputed segment/total preview) visible even
+    // though the resolved session immediately drops out of the FLAGGED
+    // table below -- closing it here would hide the very result the T15
+    // acceptance criteria asks to show "ngay sau khi sửa".
     setFlaggedSessions((prev) => prev.filter((s) => s.id !== updated.id || updated.status === 'FLAGGED'))
-    setEditingSessionId(null)
     setMessage(
       updated.status === 'FLAGGED'
         ? 'Đã lưu, phiên vẫn còn thiếu thông tin nên vẫn ở trạng thái cần xử lý.'
@@ -134,7 +137,7 @@ export function NeedsAttentionPage() {
                       <button
                         type="button"
                         className="btn btn-secondary btn-small"
-                        onClick={() => setEditingSessionId(editingSessionId === session.id ? null : session.id)}
+                        onClick={() => setEditingSession(editingSession?.id === session.id ? null : session)}
                       >
                         Sửa giờ
                       </button>
@@ -144,12 +147,8 @@ export function NeedsAttentionPage() {
               </tbody>
             </table>
           )}
-          {editingSessionId && (
-            <ManualCorrectionForm
-              session={flaggedSessions.find((s) => s.id === editingSessionId)!}
-              onSaved={handleSessionSaved}
-              onCancel={() => setEditingSessionId(null)}
-            />
+          {editingSession && (
+            <ManualCorrectionForm session={editingSession} onSaved={handleSessionSaved} onCancel={() => setEditingSession(null)} />
           )}
         </div>
       )}
