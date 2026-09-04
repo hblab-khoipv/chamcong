@@ -55,7 +55,11 @@ export function NeedsAttentionPage() {
     // though the resolved session immediately drops out of the FLAGGED
     // table below -- closing it here would hide the very result the T15
     // acceptance criteria asks to show "ngay sau khi sửa".
-    setFlaggedSessions((prev) => prev.filter((s) => s.id !== updated.id || updated.status === 'FLAGGED'))
+    setFlaggedSessions((prev) =>
+      updated.status === 'FLAGGED'
+        ? prev.map((s) => (s.id === updated.id ? updated : s))
+        : prev.filter((s) => s.id !== updated.id)
+    )
     setMessage(
       updated.status === 'FLAGGED'
         ? 'Đã lưu, phiên vẫn còn thiếu thông tin nên vẫn ở trạng thái cần xử lý.'
@@ -65,18 +69,38 @@ export function NeedsAttentionPage() {
 
   const unlinkedEmployees = employees.filter((e) => e.externalId === null)
 
+  function applyReprocessed(reprocessed: AttendanceEvent, successMessage: string) {
+    if (reprocessed.processStatus === 'UNMATCHED') {
+      setUnmatchedEvents((prev) => prev.map((e) => (e.id === reprocessed.id ? reprocessed : e)))
+      setMessage('Đã xử lý lại nhưng sự kiện vẫn chưa khớp được nhân viên.')
+      return
+    }
+    setUnmatchedEvents((prev) => prev.filter((e) => e.id !== reprocessed.id))
+    setMessage(successMessage)
+  }
+
   async function handleLinkAndReprocess(event: AttendanceEvent) {
     const employeeId = selectedEmployeeByEvent[event.id]
     if (!employeeId) return
     setActionError(null)
     try {
-      await employeesApi.linkExternal(employeeId, event.employeeExternalId)
-      await attendanceEventsApi.reprocess(event.id)
-      setUnmatchedEvents((prev) => prev.filter((e) => e.id !== event.id))
+      const { employee } = await employeesApi.linkExternal(employeeId, event.employeeExternalId)
+      setEmployees((prev) => prev.map((e) => (e.id === employee.id ? employee : e)))
+      const { attendanceEvent } = await attendanceEventsApi.reprocess(event.id)
       setLinkingEventId(null)
-      setMessage('Đã liên kết nhân viên và xử lý lại sự kiện.')
+      applyReprocessed(attendanceEvent, 'Đã liên kết nhân viên và xử lý lại sự kiện.')
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Không thể liên kết/xử lý lại sự kiện.')
+    }
+  }
+
+  async function handleReprocess(event: AttendanceEvent) {
+    setActionError(null)
+    try {
+      const { attendanceEvent } = await attendanceEventsApi.reprocess(event.id)
+      applyReprocessed(attendanceEvent, 'Đã xử lý lại sự kiện.')
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Không thể xử lý lại sự kiện.')
     }
   }
 
@@ -148,7 +172,12 @@ export function NeedsAttentionPage() {
             </table>
           )}
           {editingSession && (
-            <ManualCorrectionForm session={editingSession} onSaved={handleSessionSaved} onCancel={() => setEditingSession(null)} />
+            <ManualCorrectionForm
+              key={editingSession.id}
+              session={editingSession}
+              onSaved={handleSessionSaved}
+              onCancel={() => setEditingSession(null)}
+            />
           )}
         </div>
       )}
@@ -203,9 +232,23 @@ export function NeedsAttentionPage() {
                           </button>
                         </div>
                       ) : (
-                        <button type="button" className="btn btn-secondary btn-small" onClick={() => setLinkingEventId(event.id)}>
-                          Liên kết nhân viên
-                        </button>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-small"
+                            onClick={() => setLinkingEventId(event.id)}
+                          >
+                            Liên kết nhân viên
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-small"
+                            aria-label={`Xử lý lại sự kiện ${event.id}`}
+                            onClick={() => handleReprocess(event)}
+                          >
+                            Xử lý lại
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

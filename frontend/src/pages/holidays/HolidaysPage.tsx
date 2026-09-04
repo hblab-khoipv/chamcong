@@ -155,7 +155,12 @@ export function HolidaysPage() {
 
       {showCreateForm && <HolidayForm holiday={null} onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />}
       {editingHoliday && (
-        <HolidayForm holiday={editingHoliday} onSubmit={handleEditSave} onCancel={() => setEditingHoliday(null)} />
+        <HolidayForm
+          key={editingHoliday.id}
+          holiday={editingHoliday}
+          onSubmit={handleEditSave}
+          onCancel={() => setEditingHoliday(null)}
+        />
       )}
 
       <table className="data-table">

@@ -91,8 +91,4 @@ export const attendanceSessionsApi = {
   get: (id: string) => apiGet<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`),
   update: (id: string, input: { login_time?: string; logout_time?: string }) =>
     apiPatch<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`, input),
-  recompute: (id: string) =>
-    apiPost<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}/recompute`, {
-      confirm: true,
-    }),
 }

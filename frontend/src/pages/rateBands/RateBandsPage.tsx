@@ -112,7 +112,14 @@ export function RateBandsPage() {
       </div>
 
       {showCreateForm && <RateBandForm band={null} onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />}
-      {editingBand && <RateBandForm band={editingBand} onSubmit={handleEditSave} onCancel={() => setEditingBand(null)} />}
+      {editingBand && (
+        <RateBandForm
+          key={editingBand.id}
+          band={editingBand}
+          onSubmit={handleEditSave}
+          onCancel={() => setEditingBand(null)}
+        />
+      )}
 
       <table className="data-table">
         <thead>

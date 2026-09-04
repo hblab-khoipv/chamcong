@@ -31,3 +31,17 @@ export function formatVnTime(input: string | Date): string {
 export function formatVnMoney(amount: number): string {
   return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫'
 }
+
+// datetime-local inputs carry a bare "YYYY-MM-DDTHH:mm" with no offset. The
+// admin reads and types Vietnam wall-clock time everywhere else in the UI, so
+// these convert against the fixed +07:00 offset rather than the host timezone.
+export function toVnDatetimeLocalInput(iso: string | null): string {
+  if (!iso) return ''
+  const vn = new Date(new Date(iso).getTime() + VN_OFFSET_MINUTES * 60_000)
+  return vn.toISOString().slice(0, 16)
+}
+
+export function vnDatetimeLocalInputToIso(value: string): string {
+  const withSeconds = value.length === 16 ? `${value}:00` : value
+  return new Date(`${withSeconds}+07:00`).toISOString()
+}

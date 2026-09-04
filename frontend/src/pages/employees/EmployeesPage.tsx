@@ -137,7 +137,12 @@ export function EmployeesPage() {
         <EmployeeForm employee={null} onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
       )}
       {editingEmployee && (
-        <EmployeeForm employee={editingEmployee} onSubmit={handleEditSave} onCancel={() => setEditingEmployee(null)} />
+        <EmployeeForm
+          key={editingEmployee.id}
+          employee={editingEmployee}
+          onSubmit={handleEditSave}
+          onCancel={() => setEditingEmployee(null)}
+        />
       )}
 
       <table className="data-table">

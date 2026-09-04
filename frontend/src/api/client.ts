@@ -19,10 +19,6 @@ export function setAuthToken(token: string | null): void {
   authToken = token
 }
 
-export function getAuthToken(): string | null {
-  return authToken
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> | undefined),

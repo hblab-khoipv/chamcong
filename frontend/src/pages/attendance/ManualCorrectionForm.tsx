@@ -1,16 +1,8 @@
 import { FormEvent, useState } from 'react'
 import { attendanceSessionsApi } from '../../api/endpoints'
 import type { AttendanceSession, AttendanceSessionWithSegments } from '../../api/types'
+import { toVnDatetimeLocalInput, vnDatetimeLocalInputToIso } from '../../lib/vnTime'
 import { SegmentsTable } from './SegmentsTable'
-
-// datetime-local inputs need "YYYY-MM-DDTHH:mm" in the browser's local time,
-// no timezone suffix.
-function toDatetimeLocalValue(iso: string | null): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
 
 interface ManualCorrectionFormProps {
   session: AttendanceSession
@@ -19,8 +11,8 @@ interface ManualCorrectionFormProps {
 }
 
 export function ManualCorrectionForm({ session, onSaved, onCancel }: ManualCorrectionFormProps) {
-  const [loginTime, setLoginTime] = useState(toDatetimeLocalValue(session.loginTime))
-  const [logoutTime, setLogoutTime] = useState(toDatetimeLocalValue(session.logoutTime))
+  const [loginTime, setLoginTime] = useState(toVnDatetimeLocalInput(session.loginTime))
+  const [logoutTime, setLogoutTime] = useState(toVnDatetimeLocalInput(session.logoutTime))
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<AttendanceSessionWithSegments | null>(null)
@@ -31,8 +23,8 @@ export function ManualCorrectionForm({ session, onSaved, onCancel }: ManualCorre
     setSubmitting(true)
     try {
       const input: { login_time?: string; logout_time?: string } = {}
-      if (loginTime) input.login_time = new Date(loginTime).toISOString()
-      if (logoutTime) input.logout_time = new Date(logoutTime).toISOString()
+      if (loginTime) input.login_time = vnDatetimeLocalInputToIso(loginTime)
+      if (logoutTime) input.logout_time = vnDatetimeLocalInputToIso(logoutTime)
 
       const { attendanceSession } = await attendanceSessionsApi.update(session.id, input)
       setResult(attendanceSession)

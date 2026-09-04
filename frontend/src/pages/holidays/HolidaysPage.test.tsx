@@ -5,10 +5,14 @@ import { HolidaysPage } from './HolidaysPage'
 import { mockApi } from '../../test-utils/fetchMock'
 import { renderWithProviders } from '../../test-utils/renderWithProviders'
 
+// HolidaysPage always opens on new Date().getFullYear(), and MiniCalendar
+// keys its cells by that same year, so fixtures must track the current year.
+const YEAR = new Date().getFullYear()
+
 function holiday(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'hol-1',
-    holidayDate: '2026-01-01',
+    holidayDate: `${YEAR}-01-01`,
     name: 'Tết Dương lịch',
     rateType: 'PERCENT',
     rateValue: 200,
@@ -41,14 +45,14 @@ describe('HolidaysPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Thêm ngày lễ' })).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Thêm ngày lễ' }))
 
-    await user.type(screen.getByLabelText('Ngày'), '2026-04-30')
+    await user.type(screen.getByLabelText('Ngày'), `${YEAR}-04-30`)
     await user.type(screen.getByLabelText('Tên ngày lễ'), 'Giải phóng miền Nam')
     await user.selectOptions(screen.getByLabelText('Loại đơn giá'), 'PERCENT')
     await user.type(screen.getByLabelText('Hệ số (%)'), '200')
     await user.click(screen.getByRole('button', { name: 'Thêm' }))
 
-    await waitFor(() => expect(screen.getByTestId('holiday-day-2026-04-30')).toBeInTheDocument())
-    expect(screen.getByTestId('holiday-day-2026-04-30')).toHaveAttribute('title', 'Giải phóng miền Nam')
+    await waitFor(() => expect(screen.getByTestId(`holiday-day-${YEAR}-04-30`)).toBeInTheDocument())
+    expect(screen.getByTestId(`holiday-day-${YEAR}-04-30`)).toHaveAttribute('title', 'Giải phóng miền Nam')
   })
 
   it('thêm ngày lễ trùng ngày đã có → hiển thị lỗi từ API', async () => {
@@ -67,7 +71,7 @@ describe('HolidaysPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Thêm ngày lễ' })).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Thêm ngày lễ' }))
 
-    await user.type(screen.getByLabelText('Ngày'), '2026-01-01')
+    await user.type(screen.getByLabelText('Ngày'), `${YEAR}-01-01`)
     await user.type(screen.getByLabelText('Tên ngày lễ'), 'Trùng ngày')
     await user.selectOptions(screen.getByLabelText('Loại đơn giá'), 'PERCENT')
     await user.type(screen.getByLabelText('Hệ số (%)'), '200')
@@ -89,9 +93,9 @@ describe('HolidaysPage', () => {
     renderWithProviders(<HolidaysPage />, { authenticated: true })
     const user = userEvent.setup()
 
-    await waitFor(() => expect(screen.getByTestId('holiday-day-2026-01-01')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId(`holiday-day-${YEAR}-01-01`)).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Xoá' }))
 
-    await waitFor(() => expect(screen.queryByTestId('holiday-day-2026-01-01')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId(`holiday-day-${YEAR}-01-01`)).not.toBeInTheDocument())
   })
 })
