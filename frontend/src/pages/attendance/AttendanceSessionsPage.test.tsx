@@ -88,4 +88,24 @@ describe('AttendanceSessionsPage', () => {
     expect(flags[0].closest('tr')).toHaveTextContent('Nguyễn Văn A')
     expect(flags[0]).toHaveAttribute('title', 'Rate band no longer exists')
   })
+
+  it('lỗi tải danh sách nhân viên vẫn hiển thị sau khi đổi bộ lọc phiên thành công', async () => {
+    mockApi(({ method, pathname }) => {
+      if (method === 'GET' && pathname === '/api/employees') return { status: 500, body: { error: 'boom' } }
+      if (method === 'GET' && pathname === '/api/attendance-sessions') {
+        return { status: 200, body: { attendanceSessions: SESSIONS } }
+      }
+      return undefined
+    })
+
+    renderWithProviders(<AttendanceSessionsPage />, { authenticated: true })
+    const user = userEvent.setup()
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+
+    await user.selectOptions(screen.getByLabelText('Trạng thái'), 'CLOSED')
+
+    await waitFor(() => expect(screen.queryByText('Đang tải...')).not.toBeInTheDocument())
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
 })
