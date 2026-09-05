@@ -28,18 +28,30 @@ export function AttendanceSessionsPage() {
 
   useEffect(() => {
     let cancelled = false
+    employeesApi
+      .list()
+      .then(({ employees: employeeList }) => {
+        if (!cancelled) setEmployees(employeeList)
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách chấm công.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setLoadError(null)
-    Promise.all([
-      employeesApi.list(),
-      attendanceSessionsApi.list({
+    attendanceSessionsApi
+      .list({
         status: status || undefined,
         employeeId: employeeId || undefined,
-      }),
-    ])
-      .then(([{ employees: employeeList }, { attendanceSessions }]) => {
+      })
+      .then(({ attendanceSessions }) => {
         if (cancelled) return
-        setEmployees(employeeList)
         setSessions(attendanceSessions)
       })
       .catch((err) => {
@@ -56,8 +68,9 @@ export function AttendanceSessionsPage() {
   const employeesById = new Map(employees.map((e) => [e.id, e]))
 
   const visibleSessions = sessions.filter((session) => {
-    if (!session.loginTime) return !fromDate && !toDate
-    const dayKey = vnDateKey(session.loginTime)
+    const referenceTime = session.loginTime ?? session.logoutTime
+    if (!referenceTime) return !fromDate && !toDate
+    const dayKey = vnDateKey(referenceTime)
     if (fromDate && dayKey < fromDate) return false
     if (toDate && dayKey > toDate) return false
     return true

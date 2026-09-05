@@ -9,9 +9,10 @@ interface ManualCorrectionFormProps {
   session: AttendanceSession
   onSaved: (updated: AttendanceSessionWithSegments) => void
   onCancel: () => void
+  rateBandNames?: Map<string, string>
 }
 
-export function ManualCorrectionForm({ session, onSaved, onCancel }: ManualCorrectionFormProps) {
+export function ManualCorrectionForm({ session, onSaved, onCancel, rateBandNames }: ManualCorrectionFormProps) {
   const [loginTime, setLoginTime] = useState(toVnDatetimeLocalInput(session.loginTime))
   const [logoutTime, setLogoutTime] = useState(toVnDatetimeLocalInput(session.logoutTime))
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +79,12 @@ export function ManualCorrectionForm({ session, onSaved, onCancel }: ManualCorre
         <div>
           <p className="form-success">Đã lưu. Trạng thái mới: {result.status}.</p>
           <ComputationErrorNotice session={result} />
-          <SegmentsTable segments={result.segments} totalHours={result.totalHours} totalAmountVnd={result.totalAmountVnd} />
+          <SegmentsTable
+            segments={result.segments}
+            totalHours={result.totalHours}
+            totalAmountVnd={result.totalAmountVnd}
+            rateBandNames={rateBandNames}
+          />
         </div>
       )}
     </div>

@@ -64,6 +64,7 @@ describe('NeedsAttentionPage', () => {
       if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
         return { status: 200, body: { attendanceEvents: [] } }
       }
+      if (method === 'GET' && pathname === '/api/rate-bands') return { status: 200, body: { rateBands: [] } }
       if (method === 'PATCH' && pathname === `/api/attendance-sessions/${FLAGGED_SESSION.id}`) {
         const { login_time: loginTime } = body as { login_time: string }
         return {
@@ -123,6 +124,7 @@ describe('NeedsAttentionPage', () => {
       if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
         return { status: 200, body: { attendanceEvents: reprocessCalled ? [] : [UNMATCHED_EVENT] } }
       }
+      if (method === 'GET' && pathname === '/api/rate-bands') return { status: 200, body: { rateBands: [] } }
       if (method === 'PATCH' && pathname === '/api/employees/emp-2/link-external') {
         const { external_id: externalId } = body as { external_id: string }
         expect(externalId).toBe(UNMATCHED_EVENT.employeeExternalId)
@@ -193,6 +195,7 @@ describe('NeedsAttentionPage', () => {
         if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
           return { status: 200, body: { attendanceEvents: [] } }
         }
+        if (method === 'GET' && pathname === '/api/rate-bands') return { status: 200, body: { rateBands: [] } }
         if (method === 'PATCH' && pathname.startsWith('/api/attendance-sessions/')) {
           const id = pathname.split('/').pop() as string
           const { login_time: loginTime } = body as { login_time: string }
@@ -248,6 +251,7 @@ describe('NeedsAttentionPage', () => {
       if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
         return { status: 200, body: { attendanceEvents: reprocessCalled ? [] : [sibling] } }
       }
+      if (method === 'GET' && pathname === '/api/rate-bands') return { status: 200, body: { rateBands: [] } }
       if (method === 'POST' && pathname === `/api/attendance-events/${sibling.id}/reprocess`) {
         reprocessCalled = true
         return {
@@ -278,6 +282,7 @@ describe('NeedsAttentionPage', () => {
       if (method === 'GET' && pathname === '/api/attendance-events/unmatched') {
         return { status: 200, body: { attendanceEvents: [UNMATCHED_EVENT] } }
       }
+      if (method === 'GET' && pathname === '/api/rate-bands') return { status: 200, body: { rateBands: [] } }
       if (method === 'POST' && pathname === `/api/attendance-events/${UNMATCHED_EVENT.id}/reprocess`) {
         return { status: 200, body: { attendanceEvent: { ...UNMATCHED_EVENT, processStatus: 'ERROR' } } }
       }

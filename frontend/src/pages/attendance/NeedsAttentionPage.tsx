@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { attendanceEventsApi, attendanceSessionsApi, employeesApi } from '../../api/endpoints'
+import { attendanceEventsApi, attendanceSessionsApi, employeesApi, rateBandsApi } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
-import type { AttendanceEvent, AttendanceSession, AttendanceSessionWithSegments, Employee } from '../../api/types'
+import type { AttendanceEvent, AttendanceSession, AttendanceSessionWithSegments, Employee, RateBand } from '../../api/types'
 import { formatVnDateTime } from '../../lib/vnTime'
 import { ManualCorrectionForm } from './ManualCorrectionForm'
 
@@ -14,6 +14,7 @@ export function NeedsAttentionPage() {
   const [tab, setTab] = useState<Tab>(initialTab)
 
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [rateBands, setRateBands] = useState<RateBand[]>([])
   const [flaggedSessions, setFlaggedSessions] = useState<AttendanceSession[]>([])
   const [unmatchedEvents, setUnmatchedEvents] = useState<AttendanceEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,10 +28,16 @@ export function NeedsAttentionPage() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([employeesApi.list(), attendanceSessionsApi.list({ status: 'FLAGGED' }), attendanceEventsApi.unmatched()])
-      .then(([{ employees: employeeList }, { attendanceSessions }, { attendanceEvents }]) => {
+    Promise.all([
+      employeesApi.list(),
+      rateBandsApi.list(),
+      attendanceSessionsApi.list({ status: 'FLAGGED' }),
+      attendanceEventsApi.unmatched(),
+    ])
+      .then(([{ employees: employeeList }, { rateBands: bandList }, { attendanceSessions }, { attendanceEvents }]) => {
         if (cancelled) return
         setEmployees(employeeList)
+        setRateBands(bandList)
         setFlaggedSessions(attendanceSessions)
         setUnmatchedEvents(attendanceEvents)
       })
@@ -111,6 +118,7 @@ export function NeedsAttentionPage() {
   }
 
   const employeesById = new Map(employees.map((e) => [e.id, e]))
+  const rateBandNames = new Map(rateBands.map((band) => [band.id, band.name]))
 
   if (loading) return <p>Đang tải...</p>
   if (loadError) return <p role="alert" className="form-error">{loadError}</p>
@@ -183,6 +191,7 @@ export function NeedsAttentionPage() {
               session={editingSession}
               onSaved={handleSessionSaved}
               onCancel={() => setEditingSession(null)}
+              rateBandNames={rateBandNames}
             />
           )}
         </div>

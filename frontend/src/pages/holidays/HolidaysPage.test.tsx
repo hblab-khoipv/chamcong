@@ -117,11 +117,12 @@ describe('HolidaysPage', () => {
     const yearInput = screen.getByLabelText('Năm')
     // Editing the last digit of the year fires a refetch mid-edit; that
     // refetch must not unmount the input the admin is typing into.
+    const EDITED_YEAR = Number(`${String(YEAR).slice(0, 3)}7`)
     await user.type(yearInput, '{Backspace}7')
 
-    await waitFor(() => expect(requestedYears).toContain(`${YEAR + 1}`))
+    await waitFor(() => expect(requestedYears).toContain(`${EDITED_YEAR}`))
     expect(screen.getByLabelText('Năm')).toBe(yearInput)
     expect(yearInput).toHaveFocus()
-    expect(yearInput).toHaveValue(YEAR + 1)
+    expect(yearInput).toHaveValue(EDITED_YEAR)
   })
 })
