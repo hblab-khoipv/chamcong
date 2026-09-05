@@ -90,3 +90,25 @@ export interface AttendanceSessionSegment {
 export interface AttendanceSessionWithSegments extends AttendanceSession {
   segments: AttendanceSessionSegment[]
 }
+
+export interface PayrollReportRow {
+  employeeId: string
+  employeeName: string
+  totalHours: number
+  totalAmountVnd: number
+  computedSessionCount: number
+  flaggedSessionCount: number
+}
+
+export interface PayrollReport {
+  from: string
+  to: string
+  rows: PayrollReportRow[]
+  totalHours: number
+  totalAmountVnd: number
+  computedSessionCount: number
+  flaggedSessionCount: number
+  computationErrorSessionCount: number
+  unmatchedEventCount: number
+  hasUnresolvedSessions: boolean
+}

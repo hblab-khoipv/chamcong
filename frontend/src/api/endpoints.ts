@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from './client'
+import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from './client'
 import type {
   AttendanceEvent,
   AttendanceSession,
@@ -8,6 +8,7 @@ import type {
   EmployeeSource,
   Holiday,
   HolidayRateType,
+  PayrollReport,
   RateBand,
   RateBandCoverage,
 } from './types'
@@ -91,4 +92,26 @@ export const attendanceSessionsApi = {
   get: (id: string) => apiGet<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`),
   update: (id: string, input: { login_time?: string; logout_time?: string }) =>
     apiPatch<{ attendanceSession: AttendanceSessionWithSegments }>(`/attendance-sessions/${id}`, input),
+}
+
+export interface PayrollReportFilters {
+  from: string
+  to: string
+  employeeId?: string
+}
+
+export const reportsApi = {
+  payroll: (filters: PayrollReportFilters) =>
+    apiGet<{ report: PayrollReport }>(
+      `/reports/payroll${toQueryString({ from: filters.from, to: filters.to, employee_id: filters.employeeId })}`
+    ),
+  exportPayroll: (filters: PayrollReportFilters & { format: 'csv' | 'xlsx' }) =>
+    apiGetBlob(
+      `/reports/payroll/export${toQueryString({
+        from: filters.from,
+        to: filters.to,
+        employee_id: filters.employeeId,
+        format: filters.format,
+      })}`
+    ),
 }

@@ -163,5 +163,5 @@ Xem `PRD/PRD_ChamCong_TaskBreakdown.md` để biết chi tiết từng task và 
 - [x] T13 — Giao diện quản lý Nhân viên
 - [x] T14 — Giao diện quản lý Khung giờ & Ngày lễ
 - [x] T15 — Giao diện xem & xử lý Chấm công
-- [ ] T16 — Báo cáo & xuất dữ liệu lương
+- [x] T16 — Báo cáo & xuất dữ liệu lương
 - [ ] T17–T19 — Vận hành & triển khai
