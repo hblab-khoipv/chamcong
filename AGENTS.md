@@ -220,6 +220,19 @@ as ANSI) and only the employee summary; xlsx (via `exceljs`) gets that same
 summary sheet plus a second "Chi tiết phiên" sheet with one row per
 CLOSED/MANUAL session.
 
+## End-to-end test suite (T18) and TEST_PLAN.md
+
+`backend/src/tests/e2e.test.ts` drives the full webhook → session → rate
+engine → admin correction → payroll pipeline through the actual HTTP layer
+(not unit-level lib calls) for each of the PRD's required T18 scenarios;
+it runs as part of the same `npm test --workspace=backend` run as every
+other backend test file (no separate DB/command). `TEST_PLAN.md` (repo
+root) is the consolidated scenario/expected-result/pass-fail table required
+by T18 — update it in the same change whenever end-to-end scenario coverage
+changes, rather than letting it drift from what's actually tested. T17
+(real webhook auth) is still deferred, so these tests hit
+`POST /webhooks/attendance` unauthenticated, matching current behavior.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
