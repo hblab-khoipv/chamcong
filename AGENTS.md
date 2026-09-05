@@ -160,6 +160,41 @@ change, not token revocation. Login rate limiting
 fine for this app's single-instance deployment target; would need a shared
 store if ever run behind multiple instances.
 
+## Frontend admin UI structure (T12-T15)
+
+React Router v6 (`BrowserRouter` in `main.tsx`, `Routes` in `App.tsx`).
+`frontend/src/auth/AuthContext.tsx` holds the JWT in `localStorage` and
+mirrors it into `frontend/src/api/client.ts`'s module-level `authToken` via
+`setAuthToken` (the client is a plain fetch wrapper, not a hook, so routes
+outside React can still call it). `ProtectedRoute`/`Layout`
+(`frontend/src/components/`) gate and frame every screen except
+`/login`. Pages are organized one folder per feature under
+`frontend/src/pages/` (`employees/`, `rateBands/`, `holidays/`,
+`attendance/`); each API domain has typed request/response helpers in
+`frontend/src/api/endpoints.ts` + `types.ts` mirroring the backend's actual
+JSON field names (camelCase, matching each route's serializer). The dev
+Vite proxy (`frontend/vite.config.ts`) forwards `/api/*` to the backend on
+port 3000 stripping the prefix — the API client's base URL is `/api`.
+
+Frontend tests mock `fetch` directly (`frontend/src/test-utils/
+fetchMock.ts#mockApi`, a route-dispatch fake keyed on method+pathname) and
+render through `frontend/src/test-utils/renderWithProviders.tsx` (wraps in
+`MemoryRouter` + `AuthProvider`, seeding/clearing the `localStorage` token).
+No MSW or similar — this pattern is deliberately kept minimal and is the
+one to extend for new page tests.
+
+The employee "synced" badge (T13) is derived from `externalId !== null`,
+not the raw `source` field: `PATCH /employees/:id/link-external` (T3) only
+sets `externalId`, it never flips `source` from `manual` to `synced`. Doing
+it this way is what makes "linking makes a manual employee read as synced"
+true in the UI without changing that endpoint's contract.
+
+`GET /attendance-sessions/:id` (T15) is the one read-only place
+`serializeWithSegments` is reachable without mutating the session — every
+other caller (`PATCH`, `POST .../recompute`, both T11) changes the row it
+returns. Add new read-only session views against this endpoint, not by
+piggybacking on the mutating ones.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
