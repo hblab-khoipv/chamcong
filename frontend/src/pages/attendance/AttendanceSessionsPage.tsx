@@ -19,7 +19,8 @@ export function AttendanceSessionsPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [sessions, setSessions] = useState<AttendanceSession[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [employeesLoadError, setEmployeesLoadError] = useState<string | null>(null)
+  const [sessionsLoadError, setSessionsLoadError] = useState<string | null>(null)
 
   const [employeeId, setEmployeeId] = useState('')
   const [status, setStatus] = useState<AttendanceSessionStatus | ''>('')
@@ -34,7 +35,9 @@ export function AttendanceSessionsPage() {
         if (!cancelled) setEmployees(employeeList)
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách chấm công.')
+        if (!cancelled) {
+          setEmployeesLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách chấm công.')
+        }
       })
     return () => {
       cancelled = true
@@ -44,7 +47,7 @@ export function AttendanceSessionsPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setLoadError(null)
+    setSessionsLoadError(null)
     attendanceSessionsApi
       .list({
         status: status || undefined,
@@ -55,7 +58,9 @@ export function AttendanceSessionsPage() {
         setSessions(attendanceSessions)
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách chấm công.')
+        if (!cancelled) {
+          setSessionsLoadError(err instanceof ApiError ? err.message : 'Không tải được danh sách chấm công.')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -64,6 +69,8 @@ export function AttendanceSessionsPage() {
       cancelled = true
     }
   }, [employeeId, status])
+
+  const loadError = employeesLoadError ?? sessionsLoadError
 
   const employeesById = new Map(employees.map((e) => [e.id, e]))
 
