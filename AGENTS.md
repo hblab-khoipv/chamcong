@@ -195,6 +195,31 @@ other caller (`PATCH`, `POST .../recompute`, both T11) changes the row it
 returns. Add new read-only session views against this endpoint, not by
 piggybacking on the mutating ones.
 
+## Payroll report (T16) and its totals convention
+
+`GET /reports/payroll` (`backend/src/routes/reports.ts`) and its
+`/export?format=csv|xlsx` sibling both go through the pure
+`backend/src/lib/payrollReport.ts#buildPayrollReport` for aggregation
+(unit-tested without a DB) — the route layer only resolves the `from`/`to`
+VN-calendar-day range into session rows and hands them to it.
+**CLOSED and MANUAL sessions both count toward totals**; FLAGGED and OPEN
+never do. This was an explicit product decision (not just literal PRD
+wording, which only says "CLOSED"): MANUAL is the hand-corrected-and-still-
+fully-computed status from `PATCH /attendance-sessions/:id` (T11), and
+excluding it would mean any admin-corrected session never reaches payroll.
+A session's range membership is its anchor day — `login_time`'s VN calendar
+day, or `logout_time`'s when `login_time` is null (orphan-LOGOUT FLAGGED
+sessions) — via `vnDayStartInstant` from `lib/timeOfDay.ts`, so an overnight
+shift reports on the day it started. The response also surfaces
+`unmatchedEventCount` (UNMATCHED `attendance_events` in range, which never
+became a session at all) alongside `flaggedSessionCount` in
+`hasUnresolvedSessions`, per the PRD's completeness warning. Export building
+(`lib/payrollExport.ts`) is a separate step from aggregation: CSV gets a
+UTF-8 BOM prefix (Excel on Windows otherwise misreads Vietnamese diacritics
+as ANSI) and only the employee summary; xlsx (via `exceljs`) gets that same
+summary sheet plus a second "Chi tiết phiên" sheet with one row per
+CLOSED/MANUAL session.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.

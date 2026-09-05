@@ -8,6 +8,7 @@ import holidaysRouter from './routes/holidays'
 import webhooksRouter from './routes/webhooks'
 import attendanceEventsRouter from './routes/attendanceEvents'
 import attendanceSessionsRouter from './routes/attendanceSessions'
+import reportsRouter from './routes/reports'
 
 export function createApp(): Application {
   const app = express()
@@ -29,6 +30,7 @@ export function createApp(): Application {
   app.use(holidaysRouter)
   app.use(attendanceEventsRouter)
   app.use(attendanceSessionsRouter)
+  app.use(reportsRouter)
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

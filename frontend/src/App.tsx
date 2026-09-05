@@ -10,7 +10,7 @@ import { HolidaysPage } from './pages/holidays/HolidaysPage'
 import { AttendanceSessionsPage } from './pages/attendance/AttendanceSessionsPage'
 import { SessionDetailPage } from './pages/attendance/SessionDetailPage'
 import { NeedsAttentionPage } from './pages/attendance/NeedsAttentionPage'
-import { ReportsPlaceholderPage } from './pages/ReportsPlaceholderPage'
+import { ReportsPage } from './pages/reports/ReportsPage'
 
 function App() {
   return (
@@ -27,7 +27,7 @@ function App() {
             <Route path="/attendance" element={<AttendanceSessionsPage />} />
             <Route path="/attendance/needs-attention" element={<NeedsAttentionPage />} />
             <Route path="/attendance/:id" element={<SessionDetailPage />} />
-            <Route path="/reports" element={<ReportsPlaceholderPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
