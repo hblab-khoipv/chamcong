@@ -113,7 +113,7 @@ describe('ReportsPage', () => {
     renderWithProviders(<ReportsPage />, { authenticated: true })
     const user = userEvent.setup()
 
-    await waitFor(() => expect(screen.getByLabelText('Nhân viên')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Tran Thi B' })).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText('Nhân viên'), 'emp-2')
 
     await waitFor(() => expect(requestedEmployeeIds).toContain('emp-2'))
